@@ -138,7 +138,7 @@ export default function McpServerRow({
         {/* Offered only where it is the actual fix: an OAuth-backed server this
             account has not granted. Nothing else in the row can resolve that
             state — a retry cannot, and neither can editing the config. */}
-        {cfg.auth === "oauth" && onAuthorize && (
+        {(cfg.auth === "oauth" || status?.status === "needs_auth") && onAuthorize && (
           <button
             type="button"
             onClick={onAuthorize}

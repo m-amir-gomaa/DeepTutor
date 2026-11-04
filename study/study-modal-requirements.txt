@@ -1,0 +1,3 @@
+# Install this client in the learner's isolated Modal environment.
+# The remote image pins its own MinerU/PyMuPDF runtime in modal_mineru_app.py.
+modal==1.5.3

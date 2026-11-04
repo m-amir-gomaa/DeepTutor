@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from deeptutor.core.context import UnifiedContext
@@ -105,6 +106,14 @@ class SubmitVisualizationTool(BaseTool):
                 success=False,
                 metadata={"visualizer": visualizer_id, "validation_error": error},
             )
+
+        if visualizer_id == "html":
+            from deeptutor.services.study_bridge import validate_html
+            report = await asyncio.to_thread(validate_html, str(kwargs.get("payload") or ""))
+            if report is not None and not report["ok"]:
+                return ToolResult(content="Browser execution validation failed: " + "; ".join(report["errors"]) + ". Repair and resubmit complete HTML.", success=False, metadata={"visualizer": visualizer_id, "browser_validation": report})
+            if report is not None:
+                context.metadata["study_browser_validation"] = report
 
         entry_url = ""
         if plugin.manifest.render_target == "iframe":

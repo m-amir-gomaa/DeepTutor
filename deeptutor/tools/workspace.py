@@ -159,7 +159,7 @@ class WorkspacePresentTool(BaseTool):
             name="workspace_present",
             description=(
                 "Present one or more workspace files to the user as openable previews/cards. "
-                "Call this before linking a relative file path in Markdown. The returned path "
+                "Call this before linking a workspace file in Markdown. The returned absolute URL "
                 "must be copied exactly into the final Markdown link."
             ),
             raw_parameters={
@@ -206,7 +206,7 @@ class WorkspacePresentTool(BaseTool):
             return _failure(exc)
         rows = [item.to_dict() for item in items]
         lines = [
-            f"Presented `{item.relative_path}`. Use exactly this relative path in Markdown."
+            f"Presented `{item.relative_path}`. Published URL: http://127.0.0.1:18748{item.url}. Use this exact absolute URL in Markdown."
             for item in items
         ]
         return ToolResult(

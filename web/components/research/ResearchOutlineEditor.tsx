@@ -20,6 +20,7 @@ interface ResearchOutlineEditorProps {
   topic: string;
   onConfirm: (outline: OutlineItem[]) => void;
   status?: OutlineStatus;
+  disabled?: boolean;
 }
 
 export default function ResearchOutlineEditor({
@@ -27,6 +28,7 @@ export default function ResearchOutlineEditor({
   topic,
   onConfirm,
   status: externalStatus,
+  disabled = false,
 }: ResearchOutlineEditorProps) {
   const { t } = useTranslation();
   const [items, setItems] = useState<OutlineItem[]>(initialOutline);
@@ -72,11 +74,12 @@ export default function ResearchOutlineEditor({
   }, []);
 
   const handleConfirm = useCallback(() => {
+    if (disabled) return;
     const valid = items.filter((item) => item.title.trim());
     if (valid.length === 0) return;
     setLocalConfirmed(true);
     onConfirm(valid);
-  }, [items, onConfirm]);
+  }, [items, onConfirm, disabled]);
 
   const validItems = locked
     ? initialOutline.filter((i) => i.title.trim())
@@ -229,7 +232,7 @@ export default function ResearchOutlineEditor({
               <button
                 type="button"
                 onClick={handleConfirm}
-                disabled={items.every((i) => !i.title.trim())}
+                disabled={disabled || items.every((i) => !i.title.trim())}
                 className="flex items-center gap-1.5 rounded-lg bg-[var(--primary)] px-3 py-1.5 text-[11px] font-medium text-[var(--primary-foreground)] transition-all hover:opacity-90 disabled:opacity-40"
               >
                 <Play size={11} />

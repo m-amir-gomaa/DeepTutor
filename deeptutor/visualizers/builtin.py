@@ -34,7 +34,7 @@ def _text_validator(render_type: str):
                 )
         if render_type == "html":
             lowered = raw.lower()
-            required = ("<!doctype", "<html", "<body", "<script")
+            required = ("<!doctype", "<html", "<head", "<body", "<script")
             missing = [token for token in required if token not in lowered]
             if missing:
                 return (
@@ -270,7 +270,26 @@ Return a complete single-file HTML document. Put CSS and JavaScript inline.
 It runs in a null-origin sandbox. Use responsive sizing and semantic controls;
 do not navigate the parent. You may call sendPrompt(text) for a meaningful
 learner follow-up. Include an explanatory state, reset control and accessible
-labels for interactive elements.
+labels for interactive elements. Never load CDN scripts, fonts or external assets.
+Use browser-native JavaScript; raw TypeScript or JSX is not executable HTML.
+If using React, bundle the compiled code and runtime inline first. Prefer vanilla
+JavaScript for small lessons. Keep computation/state separate from rendering and
+derive every diagram, readout and explanation from the same state. Compute real
+states; do not hard-code a decorative sequence or fake a result. Mark illustrative
+data and source claims. Bound inputs and explain invalid input without crashing.
+Every active action, slider, selection and toggle must update a visible diagram
+or explanatory readout. Use native keyboard-operable controls, visible focus,
+stable labels and a reset. For traces, show previous/next, held state, progress
+and play/pause; clear timers on pause/reset/end and avoid automatic playback.
+Respect reduced-motion preferences. A self-contained SVG or canvas is fine;
+include meaningful text/labels alongside its visual encoding. Fit full and narrow
+desktop windows and a 390px viewport without document overflow. For a text input,
+data-study-test-value may provide a valid small example for the browser checker.
+The selected study workspace runs the HTML in a real browser before accepting it;
+it exercises multiple buttons, sliders, selections, toggles and keyboard actions.
+Repair any runtime, accessibility, interaction or layout failures it reports.
+Use explicit expected results/boundary cases to verify this topic's computation;
+the generic runtime gate cannot establish scientific or algorithmic correctness.
 """,
             ),
             origin="core",

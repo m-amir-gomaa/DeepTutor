@@ -975,6 +975,69 @@ async def get_settings():
     }
 
 
+def _codex_pool_module():
+    from deeptutor.services.study_bridge import implementation
+    implementation()
+    import codex_pool
+    return codex_pool
+
+
+@router.get("/providers/openai-codex/pool")
+async def codex_pool_status(dt_workspace: str | None = None):
+    _require_codex_oauth_actor()
+    from deeptutor.services.workspace.context import workspace_context
+    with workspace_context(dt_workspace):
+        return await _codex_pool_module().checked_public_status()
+
+
+class CodexAccountSelection(BaseModel):
+    account: Literal["auto", "primary", "secondary"]
+    allow_fallback: bool = True
+
+
+@router.post("/providers/openai-codex/pool/select")
+async def codex_pool_select(body: CodexAccountSelection, dt_workspace: str | None = None):
+    _require_codex_oauth_actor()
+    from deeptutor.services.workspace.context import workspace_context
+    try:
+        with workspace_context(dt_workspace):
+            return _codex_pool_module().select(body.account, body.allow_fallback)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from None
+
+
+@router.get("/providers/openai-codex/pool/page")
+async def codex_pool_page():
+    _require_codex_oauth_actor()
+    from fastapi.responses import HTMLResponse
+    return HTMLResponse(_codex_pool_module().PAGE, headers={"Cache-Control": "no-store"})
+
+
+@router.post("/providers/openai-codex/pool/secondary/reconnect")
+async def codex_pool_secondary_reconnect():
+    _require_codex_oauth_actor()
+    service = _codex_pool_module().secondary()
+    if service._active_inferences:
+        raise HTTPException(status_code=409, detail="Wait for the active backup-account turn to finish.")
+    try:
+        return await service.start_login()
+    except CodexAuthError as exc:
+        raise _codex_http_exception(exc) from None
+
+
+@router.post("/providers/openai-codex/pool/secondary/start")
+async def codex_pool_secondary_start():
+    _require_codex_oauth_actor()
+    pool = _codex_pool_module()
+    service = pool.secondary()
+    if service.public_status()["connection"] == "connected":
+        raise HTTPException(status_code=409, detail="Backup account is already connected; existing authorization preserved.")
+    try:
+        return await service.start_login()
+    except CodexAuthError as exc:
+        raise _codex_http_exception(exc) from None
+
+
 @router.post("/providers/openai-codex/oauth/start")
 async def start_openai_codex_oauth() -> dict[str, Any]:
     _require_codex_oauth_actor()
@@ -2547,3 +2610,10 @@ async def get_usage_statistics(
 
     combined = await asyncio.to_thread(combined_usage_records, records, start, end)
     return await asyncio.to_thread(aggregate_usage, combined, year=year, timezone=timezone)
+
+
+# Standard, owner-only study setup and prompt library. No credential form.
+from deeptutor.services.study_bridge import implementation as _study_implementation
+_study_implementation()
+import setup_center as _study_setup_center
+_study_setup_center.install_routes(router, _require_codex_oauth_actor)

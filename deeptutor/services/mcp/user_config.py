@@ -41,7 +41,15 @@ USER_MCP_DIRNAME = "user-mcp"
 
 #: Per-owner ceiling. Deliberately low: these are hosted services a person
 #: actually uses, and every one of them is a live session in the app process.
-MAX_SERVERS_PER_OWNER = 8
+def _server_capacity() -> int:
+    """Bounded local deployment capacity; does not grant any tool permission."""
+    try:
+        return max(8, min(32, int(os.environ.get("DEEPTUTOR_MCP_MAX_SERVERS", "8"))))
+    except ValueError:
+        return 8
+
+
+MAX_SERVERS_PER_OWNER = _server_capacity()
 
 #: Tool names are namespaced ``mcp_<server>_<tool>`` / ``cli_<app>``, so a
 #: server named after a namespace prefix could forge another provider's tool

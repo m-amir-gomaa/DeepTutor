@@ -165,6 +165,8 @@ class ChatOrchestrator:
             status = "completed"
             terminal_error_metadata: dict[str, Any] = {}
             try:
+                from deeptutor.services.study_bridge import prepare as prepare_study
+                await prepare_study(context, cap_name)
                 await capability.run(context, bus)
                 if bus.result_completion is False:
                     status = "failed"

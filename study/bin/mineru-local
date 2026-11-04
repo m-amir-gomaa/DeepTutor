@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+for argument in "$@"; do
+    case "$argument" in
+        --remote|--remote=*|--remote-url|--remote-url=*|--api-key|--api-key=*)
+            printf '%s\n' 'Local parsing only.' >&2; exit 2;;
+    esac
+done
+export MINERU_MODEL_SOURCE=local HF_HUB_OFFLINE=1
+export MINERU_MODEL_SMALL_BACKEND=onnx MINERU_MODEL_ONNX_DEVICE=cpu
+export MINERU_MODEL_VLM_ENGINE=llama-cpp
+export OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2
+exec "${STUDY_MINERU_CLI:-mineru-kit}" parse "$@"

@@ -40,6 +40,7 @@ import os
 from pathlib import Path
 import re
 import stat
+import time
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:  # pragma: no cover - import-time typing only
@@ -162,6 +163,7 @@ class OwnerTokenStorage:
     def __init__(self, owner_id: str, server: str) -> None:
         self._owner = owner_id
         self._server = server
+        self._pending_client = None
 
     async def get_tokens(self) -> "OAuthToken | None":
         from mcp.shared.auth import OAuthToken
@@ -175,14 +177,27 @@ class OwnerTokenStorage:
             logger.warning("stored MCP OAuth token for %s is unusable", self._server)
             return None
 
+    async def get_expiry(self) -> float | None:
+        value = _read(self._owner, self._server).get("expires_at")
+        return float(value) if isinstance(value, (int, float)) else None
+
     async def set_tokens(self, tokens: "OAuthToken") -> None:
         data = _read(self._owner, self._server)
         data["tokens"] = tokens.model_dump(mode="json", exclude_none=True)
+        if self._pending_client is not None:
+            data["client"] = self._pending_client.model_dump(mode="json", exclude_none=True)
+        if tokens.expires_in is not None:
+            data["expires_at"] = time.time() + tokens.expires_in
+        else:
+            data.pop("expires_at", None)
         _write(self._owner, self._server, data)
+        self._pending_client = None
 
     async def get_client_info(self) -> "OAuthClientInformationFull | None":
         from mcp.shared.auth import OAuthClientInformationFull
 
+        if self._pending_client is not None:
+            return self._pending_client
         raw = _read(self._owner, self._server).get("client")
         if not isinstance(raw, dict):
             return None
@@ -195,9 +210,11 @@ class OwnerTokenStorage:
             return None
 
     async def set_client_info(self, client_info: "OAuthClientInformationFull") -> None:
-        data = _read(self._owner, self._server)
-        data["client"] = client_info.model_dump(mode="json", exclude_none=True)
-        _write(self._owner, self._server, data)
+        # A rejected background request may trigger a new registration before
+        # the user has consented. Keep it provisional; replacing the stored
+        # client while retaining the previous refresh token breaks their binding.
+        # Commit the matching client and tokens atomically after an exchange.
+        self._pending_client = client_info
 
 
 # ── provider construction ─────────────────────────────────────────────────
@@ -272,7 +289,13 @@ def build_auth(
     from mcp.client.auth import OAuthClientProvider
 
     refuse_redirect, refuse_callback = refusing_handlers(server_name)
-    return OAuthClientProvider(
+    provider = OAuthClientProvider
+    if server_url.rstrip("/") == "https://api.alphaxiv.org/mcp/v1":
+        from deeptutor.services.study_bridge import implementation
+        implementation()
+        from mcp_refresh import RestartSafeOAuth
+        provider = RestartSafeOAuth
+    return provider(
         server_url=server_url,
         client_metadata=client_metadata(redirect_uri),
         storage=OwnerTokenStorage(owner_id, server_name),
@@ -313,6 +336,7 @@ class _PendingFlow:
     #: Set once the SDK hands us the URL to send the person to.
     authorize_url: str = ""
     task: "asyncio.Task[None] | None" = None
+    error: str = ""
 
 
 #: Flows awaiting a callback, keyed by the ``state`` the SDK generated.
@@ -345,6 +369,12 @@ async def begin_authorization(
     """
     import asyncio
 
+    # A second click must not leave an older consent task waiting indefinitely.
+    for key, pending in list(_PENDING.items()):
+        if pending.owner_id == owner_id and pending.server == server_name:
+            if pending.task is not None:
+                pending.task.cancel()
+            _PENDING.pop(key, None)
     forget(owner_id, server_name)
     loop = asyncio.get_running_loop()
     url_ready: asyncio.Future[str] = loop.create_future()
@@ -385,7 +415,12 @@ async def begin_authorization(
         try:
             async with httpx.AsyncClient(auth=auth, timeout=30.0) as client:
                 await client.post(server_url, json={})
+            if not oauth_state(owner_id, server_name).authorized:
+                raise RuntimeError("The provider did not complete the authorization grant.")
+            from deeptutor.services.mcp import get_mcp_manager
+            await get_mcp_manager().reconnect_server(owner_id, server_name)
         except Exception as exc:  # noqa: BLE001 - reported through the futures
+            flow.error = "The authorization exchange failed (" + type(exc).__name__ + "). Please reconnect."
             if not url_ready.done():
                 url_ready.set_exception(exc)
         finally:
@@ -393,7 +428,9 @@ async def begin_authorization(
                 if pending is flow:
                     _PENDING.pop(key, None)
 
-    flow.task = asyncio.create_task(_drive(), name=f"mcp-oauth-{server_name}")
+    flow.task = asyncio.create_task(asyncio.wait_for(_drive(), FLOW_TIMEOUT_S), name=f"mcp-oauth-{server_name}")
+    # A provider error/expired abandoned flow must not leak an unobserved task.
+    flow.task.add_done_callback(lambda task: None if task.cancelled() else task.exception())
     try:
         return await asyncio.wait_for(url_ready, timeout=30.0)
     except Exception:
@@ -407,11 +444,26 @@ def complete_authorization(state: str, code: str) -> bool:
     Returns ``False`` for a ``state`` nothing is waiting on — a replayed or forged
     callback, which must not be able to complete anything.
     """
-    flow = _PENDING.pop(state, None)
+    flow = _PENDING.get(state)
     if flow is None or flow.result.done():
         return False
     flow.result.set_result((code, state))
     return True
+
+
+async def finish_authorization(state: str, code: str) -> tuple[bool, str]:
+    """Wait for token exchange before calling a browser callback successful."""
+    flow = _PENDING.get(state)
+    if flow is None or not complete_authorization(state, code):
+        return False, "This authorization expired or was already completed. Please reconnect."
+    try:
+        if flow.task is not None:
+            await asyncio.wait_for(asyncio.shield(flow.task), timeout=45)
+    except (TimeoutError, asyncio.CancelledError):
+        return False, "Authorization did not finish in time. Please reconnect."
+    if flow.error:
+        return False, flow.error
+    return oauth_state(flow.owner_id, flow.server).authorized, ""
 
 
 def _state_from(authorize_url: str) -> str:

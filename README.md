@@ -1,3 +1,14 @@
+# Personalized study fork
+
+This branch adds a portable study layer on upstream DeepTutor v1.7.1: reusable
+prompts, discipline profiles including medicine/research, chronological source
+routes, Obsidian/Anki handoffs, account selection and optional private Modal OCR.
+Start with [the study-layer guide](study/README.md),
+[human setup](study/SETUP-HUMAN.md) or [agent setup](study/SETUP-AGENT.md).
+Learner books, credentials, private settings and progress are not included.
+
+---
+
 <div align="center">
 
 <p align="center"><img src="assets/figs/logo/color-full.png" alt="DeepTutor" width="480"></p>

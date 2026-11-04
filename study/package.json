@@ -1,0 +1,9 @@
+{
+  "name": "deeptutor-study-validation",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Browser execution checks for generated study artifacts",
+  "dependencies": {
+    "playwright": "1.64.1"
+  }
+}

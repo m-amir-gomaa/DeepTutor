@@ -216,6 +216,8 @@ class CliAppTool(BaseTool):
         mounts = tuple(kwargs.get("_sandbox_mounts") or ())
         sandbox_env = dict(kwargs.get("_sandbox_env") or {})
         workspace_id = str(kwargs.get("_workspace_id") or "")
+        from deeptutor.services.study_bridge import cli_env
+        sandbox_env.update(cli_env(self._app.id, workspace_id))
         if workdir:
             from deeptutor.services.sandbox.artifacts import snapshot_public_artifact_files
 

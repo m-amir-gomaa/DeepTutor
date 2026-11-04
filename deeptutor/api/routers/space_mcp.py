@@ -107,7 +107,7 @@ async def list_servers() -> dict[str, Any]:
     # row's status, not the page.
     for warm in (manager.ensure_started(), manager.ensure_scope(owner)):
         try:
-            await asyncio.wait_for(warm, timeout=_STATUS_WARM_TIMEOUT_S)
+            await asyncio.wait_for(asyncio.shield(warm), timeout=_STATUS_WARM_TIMEOUT_S)
         except Exception:
             logger.debug("MCP status warm-up did not finish for owner %s", owner, exc_info=True)
     return {
@@ -221,9 +221,8 @@ async def oauth_callback(
         return _callback_page(False, error_description or error)
     if not code or not state:
         return _callback_page(False, t("mcp.oauth_callback_incomplete"))
-    if not oauth.complete_authorization(state, code):
-        return _callback_page(False, t("mcp.oauth_callback_unknown"))
-    return _callback_page(True, "")
+    ok, message = await oauth.finish_authorization(state, code)
+    return _callback_page(ok, message)
 
 
 def _request_origin(request: Request) -> str:
@@ -247,7 +246,7 @@ def _callback_page(ok: bool, message: str) -> Response:
  .d{{color:#8a6d3b;font-size:13px;max-width:34rem;word-break:break-word}}
  @media(prefers-color-scheme:dark){{body{{background:#111;color:#e8e8e8}}}}
 </style>
-<div class="c"><p>{html.escape(title)}</p>{detail}
+<div class="c"><p>{html.escape(title)}</p>{detail}<p><a href="/space/mcp">Return to MCP Services</a></p>
 <script>setTimeout(function(){{window.close()}},{1200 if ok else 6000})</script></div>"""
     return Response(content=body, media_type="text/html", status_code=200 if ok else 400)
 

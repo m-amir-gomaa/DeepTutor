@@ -127,6 +127,15 @@ export function WorkspaceMenu({
             <Settings size={16} strokeWidth={1.6} />
             <span className="flex-1">{t('Settings')}</span>
           </Link>
+          <a
+            role="menuitem"
+            href={`/api/settings/study/page${active ? `?dt_workspace=${encodeURIComponent(active)}` : ''}`}
+            onClick={close}
+            className="dt-menu-item"
+          >
+            <Settings2 size={16} strokeWidth={1.6} />
+            <span className="flex-1">{t('Study setup')}</span>
+          </a>
           {accountSlot ? <div className="dt-menu-slot">{accountSlot}</div> : null}
           <div className="dt-menu-divider" />
           <div className="dt-menu-footer">

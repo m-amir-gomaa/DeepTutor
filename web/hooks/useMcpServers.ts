@@ -1,7 +1,9 @@
 "use client";
 
+import { openMcpAuthorization } from "@/lib/mcp-authorization";
+
 import { resourceUsage } from "@/lib/workspaces-api";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -40,6 +42,10 @@ export function useMcpServers(surface: McpSurface) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const authorizationTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => () => {
+    if (authorizationTimer.current) clearInterval(authorizationTimer.current);
+  }, []);
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   // Editing key: a server name for edit, "" for the "add new" form, or null
@@ -185,17 +191,25 @@ export function useMcpServers(surface: McpSurface) {
       setSaving(true);
       setSaveError(null);
       try {
-        const url = await authorizeSpaceMcpServer(surface.basePath, name);
-        if (!url) throw new Error("no authorization URL");
-        if (typeof window !== "undefined")
-          window.open(url, "_blank", "noopener");
+        const popup = await openMcpAuthorization(() => authorizeSpaceMcpServer(surface.basePath, name));
+        if (popup) {
+          if (authorizationTimer.current) clearInterval(authorizationTimer.current);
+          const startedAt = Date.now();
+          authorizationTimer.current = setInterval(() => {
+            if (popup.closed || Date.now() - startedAt > 600_000) {
+              if (authorizationTimer.current) clearInterval(authorizationTimer.current);
+              authorizationTimer.current = null;
+              if (popup.closed) void load();
+            }
+          }, 1000);
+        }
       } catch (err) {
         setSaveError(describeMcpError(err, t));
       } finally {
         setSaving(false);
       }
     },
-    [surface.basePath, saving, t],
+    [surface.basePath, saving, t, load],
   );
 
   const save = useCallback(

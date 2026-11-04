@@ -498,7 +498,8 @@ class AudioOverviewPipeline:
             },
         ]
         items = service.publish(binding, rows)
-        return [item.to_dict() for item in items]
+        from deeptutor.services.study_bridge import publish_audio_player
+        return publish_audio_player(self, [item.to_dict() for item in items], audio_path, transcript_path, title)
 
 
 __all__ = [

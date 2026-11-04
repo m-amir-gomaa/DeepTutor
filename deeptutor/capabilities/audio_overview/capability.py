@@ -50,7 +50,9 @@ class AudioOverviewCapability(TurnCapability):
             self.name,
             language=context.language,
         )
+        from deeptutor.services.study_bridge import speech_override
         pipeline = AudioOverviewPipeline(
+            speech_func=speech_override(),
             language=context.language,
             system_prompt=str(prompts.get("system") or ""),
             instruction_prompt=str(prompts.get("instructions") or ""),
@@ -123,9 +125,11 @@ class AudioOverviewCapability(TurnCapability):
                     stage="publishing",
                 )
 
+        from deeptutor.services.study_bridge import audio_envelope
         await emit_capability_result(
             stream,
             {
+                **audio_envelope(artifacts),
                 "response": artifacts.transcript,
                 "title": artifacts.title,
                 "kb_name": kb_name,

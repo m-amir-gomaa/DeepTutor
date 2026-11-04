@@ -152,3 +152,6 @@ temp/
 # ============================================
 LICENSE
 Communication.md
+study/installation.json
+study/installation.*.json
+study/.local/

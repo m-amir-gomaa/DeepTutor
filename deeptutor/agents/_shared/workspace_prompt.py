@@ -51,8 +51,8 @@ def workspace_system_note(
         "When exec code must open an existing binary workspace file, join the "
         "DEEPTUTOR_WORKSPACE_ROOT environment variable with the exact relative path returned "
         "by a workspace tool; never print the variable's value.\n"
-        "To let the user open a file, call workspace_present first, then use the exact relative "
-        f"path it returns in Markdown. Never paste an internal download URL. {export}"
+        "To let the user open a file, call workspace_present first, then use the exact published absolute "
+        f"URL it returns in Markdown. Never invent a download URL. {export}"
     )
 
 

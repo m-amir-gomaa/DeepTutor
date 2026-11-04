@@ -96,6 +96,18 @@ def mineru_readiness(config) -> ReadinessReport:
             )
         return ReadinessReport(ready=True)
 
+    # The fork's explicit bounded adapter has a separate verified model cache.
+    from deeptutor.services.study_bridge import _INSTALL
+    adapter = _INSTALL / "bin" / "study-mineru"
+    if config.local_cli_path and Path(config.local_cli_path).resolve() == adapter.resolve():
+        from deeptutor.services.study_bridge import implementation
+        implementation()
+        from native_mineru import ready
+        return ReadinessReport(ready=True) if ready() else ReadinessReport(
+            ready=False, reason="models_missing",
+            message="Offline study MinerU files are missing; no download was attempted.",
+        )
+
     # Local mode.
     from .backend import local_cli_probe
 

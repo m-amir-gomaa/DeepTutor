@@ -1,0 +1,6 @@
+installation.json
+installation.*.json
+__pycache__/
+*.pyc
+node_modules/
+.local/

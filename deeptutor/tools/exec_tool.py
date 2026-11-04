@@ -180,6 +180,9 @@ class ExecTool(BaseTool):
         return ResourceLimits(timeout_s=max(1, min(timeout, _MAX_TIMEOUT)))
 
     async def execute(self, **kwargs: Any) -> ToolResult:
+        from deeptutor.services.study_bridge import execution_env
+        kwargs['_sandbox_env'] = {**dict(kwargs.get('_sandbox_env') or {}),
+                                  **execution_env(kwargs.get('_workspace_id'))}
         code = str(kwargs.get("code") or "").strip()
         if not code:
             raise ValueError("exec requires non-empty 'code'.")

@@ -372,7 +372,8 @@ class ResearchPipeline:
                 from deeptutor.multi_user.knowledge_access import resolve_kb_metadata
 
                 meta = resolve_kb_metadata(self.kb_name)
-                if meta and meta.get("type") == OBSIDIAN_KB_TYPE:
+                from deeptutor.services.study_bridge import known_kb as study_kb
+                if meta and meta.get("type") == OBSIDIAN_KB_TYPE and not study_kb(self.kb_name):
                     self._is_obsidian_kb = True
                     vault_path = str(meta.get("vault_path") or "").strip()
                     if vault_path:
@@ -1922,7 +1923,7 @@ class ResearchPipeline:
                     # Report prose is the reader-facing body; thinking on a
                     # reasoning model comes out of the same max_tokens budget
                     # and is the usual cause of first-attempt truncation.
-                    reasoning_effort="none",
+                    reasoning_effort=("low" if self.model in {"gpt-6.1-sol", "gpt-6-astra"} else "none"),
                     # Buffer body text until validation succeeds. Passing
                     # ``final_meta`` here would stream a failed attempt and
                     # make a clean retry impossible without duplicated prose.

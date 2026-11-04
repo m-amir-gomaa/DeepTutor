@@ -1,5 +1,14 @@
 # DeepTutor — Agent-Native Architecture
 
+## Personalized study fork
+
+For setup of this fork, read `study/SETUP-AGENT.md` and `study/README.md` first.
+The portable study layer is in `study/`; learner data and native credentials
+stay outside the checkout. Choose discipline profiles per learner, preserve
+existing routes/progress, and distinguish installed, configured, authorized and
+exercised integrations. Never seed the original author's private paths, books,
+accounts or acceptance history into a new installation.
+
 ## Overview
 
 DeepTutor is an **agent-native** intelligent learning companion organized

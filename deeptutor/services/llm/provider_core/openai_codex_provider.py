@@ -5,6 +5,8 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 import hashlib
 import json
+from datetime import datetime, timezone
+import re
 from typing import Any
 
 import httpx
@@ -28,9 +30,10 @@ DEFAULT_ORIGINATOR = "DeepTutor"
 
 
 class CodexHTTPError(RuntimeError):
-    def __init__(self, status_code: int, safe_message: str) -> None:
+    def __init__(self, status_code: int, safe_message: str, diagnostic: dict | None = None) -> None:
         super().__init__(safe_message)
         self.status_code = status_code
+        self.diagnostic = diagnostic or {}
 
 
 class OpenAICodexProvider(LLMProvider):
@@ -40,8 +43,19 @@ class OpenAICodexProvider(LLMProvider):
         super().__init__(api_key=None, api_base=None)
         self.default_model = default_model
 
-    async def _load_token(self) -> CodexToken:
-        return await get_codex_oauth_service().get_token()
+    @classmethod
+    def _is_transient_error(cls, content, *, status_code=None, exception=None):
+        # Explicit account allowance and timed throttling responses require the
+        # stated reset/delay, not nested immediate stream/provider retries.
+        if any(marker in (content or "") for marker in (
+            "Codex usage allowance exhausted", "Codex requests are throttled",
+            "Both Codex accounts are unavailable", "Codex stream interrupted after output began",
+        )):
+            return False
+        return super()._is_transient_error(content, status_code=status_code, exception=exception)
+
+    async def _load_token(self, service=None) -> CodexToken:
+        return await (service or get_codex_oauth_service()).get_token()
 
     async def _call_codex(
         self,
@@ -52,6 +66,7 @@ class OpenAICodexProvider(LLMProvider):
         tool_choice: str | dict[str, Any] | None,
         on_content_delta: Callable[[str], Awaitable[None]] | None = None,
         session_id: str | None = None,
+        on_tool_args_delta: Callable[[str, str, str], Awaitable[None]] | None = None,
     ) -> LLMResponse:
         model_name = model or self.default_model
         model_slug = _strip_model_prefix(model_name)
@@ -80,41 +95,59 @@ class OpenAICodexProvider(LLMProvider):
                 if tool.get("type") == "function":
                     tool.setdefault("strict", False)
 
-        service = get_codex_oauth_service()
+        from deeptutor.services.study_bridge import implementation
+        implementation()
+        import codex_pool
+        service = codex_pool.preferred(get_codex_oauth_service())
+        emitted = False
+        async def content_delta(value):
+            nonlocal emitted
+            emitted = True
+            if on_content_delta:
+                await on_content_delta(value)
+        async def arguments_delta(*values):
+            nonlocal emitted
+            emitted = True
+            if on_tool_args_delta:
+                await on_tool_args_delta(*values)
+        served_by = None
+        async def invoke(token):
+            nonlocal served_by
+            result = await _request_codex(
+                CODEX_RESPONSES_URL,
+                _build_headers(token.account_id, token.access_token, session_id=prompt_cache_key),
+                body, verify=not disable_ssl_verify_enabled(),
+                on_content_delta=content_delta, on_tool_args_delta=arguments_delta,
+            )
+            # Only set after a completed provider response, including fallback.
+            served_by = service if token.account_id == active_token.account_id else codex_pool.secondary() if codex_pool.slot(service) == "primary" else get_codex_oauth_service()
+            return result
         async with service.inference_guard():
             try:
-                token = await self._load_token()
+                token = await self._load_token(service)
+                active_token = token
                 service.validate_runtime_profile(token, model_slug, reasoning_effort)
-                headers = _build_headers(
-                    token.account_id, token.access_token, session_id=prompt_cache_key
-                )
                 try:
-                    content, tool_calls, finish_reason = await _request_codex(
-                        CODEX_RESPONSES_URL,
-                        headers,
-                        body,
-                        verify=not disable_ssl_verify_enabled(),
-                        on_content_delta=on_content_delta,
-                    )
+                    content, tool_calls, finish_reason = await invoke(token)
+                    codex_pool.succeeded(service)
                 except CodexHTTPError as exc:
                     if exc.status_code == 401:
                         try:
                             await service.recover_after_unauthorized(token.generation)
-                        except CodexAuthError as refresh_error:
-                            # Only promise a retry when the session really was
-                            # renewed; a dead refresh token needs a new sign-in.
-                            logger.warning("Codex token renewal after HTTP 401 failed")
-                            if refresh_error.code in {
-                                "authentication_required",
-                                "token_refresh_rejected",
-                            }:
-                                raise CodexHTTPError(
-                                    exc.status_code,
-                                    "Codex login expired and could not be renewed. Sign in again.",
-                                ) from None
-                            raise
-                    raise
+                        except CodexAuthError:
+                            # Another separately authorized account may still work.
+                            pass
+                    alternate = None if emitted else await codex_pool.try_other(
+                        service, exc, token, model_slug, reasoning_effort, invoke,
+                    )
+                    if alternate is None:
+                        if exc.diagnostic.get("accounts_attempted") == 2:
+                            raise CodexHTTPError(exc.status_code, "Both Codex accounts are unavailable. " + str(exc), exc.diagnostic) from None
+                        raise
+                    content, tool_calls, finish_reason = alternate
+                account_used = codex_pool.record_use(served_by or service, model_slug, session_id)
                 return LLMResponse(
+                    provider_specific_fields={"codex_account": account_used},
                     content=content,
                     tool_calls=tool_calls,
                     finish_reason=finish_reason,
@@ -123,6 +156,7 @@ class OpenAICodexProvider(LLMProvider):
                 return LLMResponse(
                     content=f"Error calling Codex: {exc}",
                     finish_reason="error",
+                    provider_specific_fields={"codex_error": exc.diagnostic},
                 )
             except CodexAuthError as exc:
                 return LLMResponse(
@@ -130,6 +164,11 @@ class OpenAICodexProvider(LLMProvider):
                     finish_reason="error",
                 )
             except Exception as exc:
+                if emitted:
+                    return LLMResponse(
+                        content="Error calling Codex: Codex stream interrupted after output began. Preserve the displayed content and retry manually; no account replay was attempted.",
+                        finish_reason="error",
+                    )
                 if is_transient_transport_error(exc):
                     # Preserve a structured retry signal without exposing the
                     # URL, proxy, response body, or token-bearing request.
@@ -171,6 +210,7 @@ class OpenAICodexProvider(LLMProvider):
         tool_choice: str | dict[str, Any] | None = None,
         on_content_delta: Callable[[str], Awaitable[None]] | None = None,
         on_reasoning_delta: Callable[[str], Awaitable[None]] | None = None,
+        on_tool_args_delta: Callable[[str, str, str], Awaitable[None]] | None = None,
         **kwargs: Any,
     ) -> LLMResponse:
         del max_tokens, temperature, on_reasoning_delta
@@ -183,6 +223,7 @@ class OpenAICodexProvider(LLMProvider):
             tool_choice,
             on_content_delta,
             session_id=session_id,
+            on_tool_args_delta=on_tool_args_delta,
         )
 
     def get_default_model(self) -> str:
@@ -221,23 +262,20 @@ async def _request_codex(
     body: dict[str, Any],
     verify: bool,
     on_content_delta: Callable[[str], Awaitable[None]] | None = None,
+    on_tool_args_delta: Callable[[str, str, str], Awaitable[None]] | None = None,
 ) -> tuple[str, list[ToolCallRequest], str]:
     async with httpx.AsyncClient(timeout=60.0, verify=verify) as client:
         async with client.stream("POST", url, headers=headers, json=body) as response:
             if response.status_code != 200:
                 raw = await response.aread()
-                # Kept out of the reply the learner sees, but an operator cannot
-                # diagnose an upstream rejection without the body.
-                logger.debug(
-                    "Codex API returned HTTP {}: {}",
-                    response.status_code,
-                    raw.decode("utf-8", "ignore")[:500],
-                )
+                message, diagnostic = _describe_error(response.status_code, raw, response.headers)
+                logger.warning("Codex API rejected request: status={}, code={}", response.status_code, diagnostic.get("code", "unknown"))
                 raise CodexHTTPError(
                     response.status_code,
-                    _friendly_error(response.status_code),
+                    message,
+                    diagnostic,
                 )
-            return await consume_sse(response, on_content_delta)
+            return await consume_sse(response, on_content_delta, on_tool_args_delta=on_tool_args_delta)
 
 
 def _pop_session_id(kwargs: dict[str, Any]) -> str | None:
@@ -269,3 +307,30 @@ def _friendly_error(status_code: int) -> str:
     if status_code == 429:
         return "Codex usage quota exceeded or rate limit triggered. Please try again later."
     return f"Codex returned HTTP {status_code}."
+
+
+def _describe_error(status_code: int, raw: bytes, headers) -> tuple[str, dict]:
+    """Keep known error codes/reset timing; never expose arbitrary upstream text."""
+    try:
+        data=json.loads(raw)
+        error=data.get("error", {}) if isinstance(data,dict) else {}
+        error=error if isinstance(error,dict) else {}
+    except (ValueError,TypeError):
+        error={}
+    code=str(error.get("code") or error.get("type") or "")
+    code=code if re.fullmatch(r"[a-zA-Z0-9_]{1,80}",code) else "unknown"
+    diagnostic={"status":status_code,"code":code}
+    reset=error.get("resets_at",error.get("reset_at"))
+    timing=""
+    if isinstance(reset,(int,float)) and not isinstance(reset,bool) and 0<reset<32503680000:
+        diagnostic["resets_at"]=reset
+        timing=" Resets at "+datetime.fromtimestamp(reset,timezone.utc).strftime("%Y-%m-%d %H:%M UTC")+"."
+    retry=headers.get("retry-after", "")
+    if re.fullmatch(r"\d{1,8}",str(retry)):
+        diagnostic["retry_after_seconds"]=int(retry)
+    if status_code==429:
+        if code in {"usage_limit_reached","insufficient_quota","credit_balance_exhausted","billing_hard_limit_reached","organization_usage_limit_exceeded","organization_spend_limit_exceeded","project_spend_limit_exceeded"}:
+            return "Codex usage allowance exhausted."+timing+" Wait for the allowance to reset or check this signed-in account's usage. Repeated retries will not restore access.",diagnostic
+        delay=(" Retry after "+str(diagnostic["retry_after_seconds"])+" seconds.") if "retry_after_seconds" in diagnostic else " Please wait before trying again."
+        return "Codex requests are throttled."+delay,diagnostic
+    return _friendly_error(status_code),diagnostic

@@ -864,7 +864,7 @@ export const AssistantMessage = memo(function AssistantMessage({
   }, [msg.capability, resultEvent]);
 
   const visualizeResult = useMemo(() => {
-    if (msg.capability !== "visualize" || !resultEvent) return null;
+    if ((msg.capability !== "visualize" && msg.capability !== "audio_overview") || !resultEvent) return null;
     return extractVisualizeResult(resultEvent.metadata);
   }, [msg.capability, resultEvent]);
 
@@ -1194,6 +1194,7 @@ export const AssistantMessage = memo(function AssistantMessage({
               )
             }
             status={outlineStatus}
+            disabled={isStreaming}
           />
           {showResearchBody ? (
             <AssistantResponse

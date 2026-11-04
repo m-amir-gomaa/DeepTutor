@@ -945,6 +945,27 @@ class CodexOAuthService:
             self._model_catalog.update(mutate)
             return self.public_status()
 
+    def public_identity(self) -> dict[str, str | None]:
+        """Display-only identity from this service's owned ID token; never auth evidence.
+
+        Return two allowlisted labels, never a token, claim set or account identifier.
+        """
+        import base64, json
+        try:
+            credentials = self._store.load_credentials()
+            if credentials is None:
+                return {"name": None, "email": None}
+            part = credentials.id_token.split(".")[1]
+            if len(part) > 32000:
+                return {"name": None, "email": None}
+            claims = json.loads(base64.urlsafe_b64decode(part + "=" * (-len(part) % 4)))
+            def label(key):
+                value = claims.get(key)
+                return "".join(c for c in value if c.isprintable())[:160] if isinstance(value, str) else None
+            return {"name": label("name"), "email": label("email")}
+        except (CodexAuthError, ValueError, IndexError, TypeError, KeyError):
+            return {"name": None, "email": None}
+
     def public_status(self) -> dict[str, Any]:
         operation = self._operation
         credentials: CodexCredentials | None = None

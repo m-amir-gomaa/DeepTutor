@@ -28,6 +28,10 @@ async def rag_search(
     """
     query = query.strip() if isinstance(query, str) else ""
     kb_name = kb_name.strip() if isinstance(kb_name, str) else ""
+    from deeptutor.services.study_bridge import retrieve as study_retrieve
+    study_result = await asyncio.to_thread(study_retrieve, query, kb_name) if query else None
+    if study_result is not None:
+        return study_result
     if not query:
         raise ValueError("RAG query must be a non-empty string.")
     if not kb_name:
