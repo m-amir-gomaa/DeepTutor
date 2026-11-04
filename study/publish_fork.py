@@ -18,7 +18,10 @@ def publish(owner,execute=False):
     target=owner+'/DeepTutor';existing=run('gh','api','repos/'+target,check=False)
     if existing.returncode:
         if '404' not in existing.stderr and '404' not in existing.stdout:raise ValueError('Cannot inspect the target repository. No fork was created.')
-        run('gh','repo','fork',UPSTREAM,'--clone=false','--remote=false')
+        # --remote applies only when gh infers the repository from cwd.
+        # An explicit repository plus --clone=false creates the remote fork
+        # without cloning; this helper configures the local remotes below.
+        run('gh','repo','fork',UPSTREAM,'--clone=false')
         for _ in range(10):
             existing=run('gh','api','repos/'+target,check=False)
             if existing.returncode==0:break
@@ -44,3 +47,7 @@ if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('owner');p.add_argument('--publish',action='store_true');a=p.parse_args()
     try:print(json.dumps(publish(a.owner,a.publish),indent=2))
     except ValueError as e:raise SystemExit(str(e))
+    except subprocess.CalledProcessError as e:
+        message=(e.stderr or e.stdout or str(e)).strip()
+        message=re.sub(r'(?:gh[pousr]_|github_pat_)[A-Za-z0-9_]+','[redacted]',message)
+        raise SystemExit(message[:1600])
