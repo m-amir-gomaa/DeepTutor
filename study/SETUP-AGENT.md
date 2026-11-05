@@ -15,6 +15,12 @@ or an explicit combined syllabus. An available book is not an assigned course.
 Prefer content and complete examples before checks unless the learner chooses
 otherwise. Keep goals and preferences editable in `LEARNER.md`.
 
+For textbook teaching, use relevant original figures and tables as the base.
+Enable original plots, simulations, diagrams and animations when they reveal a
+mechanism, relationship or derivation beyond the page. Follow study-visuals:
+preserve source assumptions, label new teaching models, verify calculations and
+inspect actual renders. Decorative text slides do not demonstrate understanding.
+
 Credentials are owner actions. Never ask for tokens in chat, inspect unrelated
 credential stores, copy Codex host grants or commit local settings. Use each
 provider's native authorization and confirm successful status afterward. Never

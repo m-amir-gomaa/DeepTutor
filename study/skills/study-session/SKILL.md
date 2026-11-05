@@ -22,6 +22,11 @@ Respect the learner's media preference: prioritize relevant original textbook
 figures and explain their labels, relations, assumptions and limitations. Use a
 source-based animation only when it adds understanding. Generic simple diagrams
 must not replace detailed explanations or the source's actual visual evidence.
+The tutor may also create original plots, simulations, mechanism diagrams or
+animations that reveal structure, dynamics or reasoning beyond the printed
+figure. Use study-visuals for their construction and content checks; distinguish
+new teaching models from original evidence. Do not reduce a substantive concept
+to decorative text slides or a generic collection of labelled boxes.
 
 Read library/STUDY-PREPARATION.md for this subject's prepared route and
 library/BOOK-ATLAS.md for registered book roles, contents and source locations.

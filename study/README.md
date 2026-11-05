@@ -15,6 +15,10 @@ page with `source_page`, then publish a readable, unaltered crop with
 `source_figure`. Crops retain the PDF hash, physical page and region; include
 relevant legends, units and captions. Follow the learner's media preferences.
 An opening lesson can be text-only; interactivity, audio and animation are optional.
+The tutor can also build original plots, simulations, mechanism diagrams and
+animations when they clarify structure or reasoning beyond the source figure.
+The visual skill requires source comparison, calculation and render/interaction
+checks; decorative text slides are not a substitute for an explanatory visual.
 
 ## Quick start after the upstream source install
 
