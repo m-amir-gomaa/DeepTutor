@@ -13,9 +13,12 @@ exercised template selection, medical topic fields, literal untrusted text,
 clipboard copying, Markdown download, workspace-bound account links and both
 setup guides at 1440/1920 desktop widths.
 
-The current portable suite has **87 passing tests**, with **147 relevant upstream
-tests** also passing. Frontend typechecking and **1,337 frontend logic tests**
-passed, including OAuth popup ordering and failure handling. A rendered React
+On 2026-11-05 the portable suite passed **89 tests**, including text-only opening
+lessons, optional interactive companions, and original PDF figure crops with
+source hashes, workspace isolation and locked-page/invalid-region rejection.
+The earlier core verification passed **147 relevant upstream tests**. Frontend
+typechecking and **1,337 frontend logic tests** passed, including OAuth popup
+ordering and failure handling. A rendered React
 test verifies that Research confirmation stays disabled during the active turn.
 
 The existing author's separately authorized installation also completed a real

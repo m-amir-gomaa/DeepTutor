@@ -3,9 +3,19 @@ name: study-visuals
 description: Explain algorithms, mathematical ideas and biological mechanisms with source figures, interactive traces or original Manim animations in the selected study workspace.
 ---
 
-Prefer useful visual reasoning: the owner especially likes animated traces and
-the intuition of 3Blue1Brown's calculus, linear algebra and probability lessons.
-Use original compositions rather than copying another creator's footage/style
+Start from the learner's stated media preferences. For textbook study, inspect
+the actual figures, tables, labels and captions with `source_page` before choosing
+a representation. Use the relevant original as the visual base; `source_figure`
+can publish a readable crop after inspecting the whole page. Preserve legends,
+units, panels, source locators and context. Explain how to read the figure, the
+mechanism or argument it represents, its assumptions and what it cannot establish.
+Do not replace a substantive source figure with a decorative generic flowchart.
+An animation is useful when it reveals change, causal steps or an algorithmic
+trace; build it around the source's structure and distinguish any new example
+or overlay from the original. Respect a preference for source figures and depth
+over simplified illustrations. A source without a useful figure can use precise
+prose, equations, code or a table. No media quota and no forced elementary images.
+Use original animation compositions rather than another creator's footage/style
 assets. No audio is needed unless pronunciation or a specific task benefits.
 
 Read the relevant source/figure with `source_page`. State what the figure really

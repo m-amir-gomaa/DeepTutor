@@ -10,6 +10,12 @@ The same source-aware workflow supports college, algorithms, medicine, biology,
 research, maths/ML and coding. Choose a profile; the fork supplies no personal
 library, accounts or accomplishments.
 
+Textbook lessons can use the original source figures directly: inspect the full
+page with `source_page`, then publish a readable, unaltered crop with
+`source_figure`. Crops retain the PDF hash, physical page and region; include
+relevant legends, units and captions. Follow the learner's media preferences.
+An opening lesson can be text-only; interactivity, audio and animation are optional.
+
 ## Quick start after the upstream source install
 
 ```bash

@@ -65,6 +65,28 @@ class QualityPipeline(unittest.TestCase):
  def test_sparse_and_damaged_glyphs_are_visible_warnings(self):
   self.assertTrue(source_pipeline.quality(''))
   self.assertTrue(any('glyph' in w for w in source_pipeline.quality('word '*50+'\ue001')))
+ def test_source_figure_retains_provenance_and_rejects_locked_or_invalid_crops(self):
+  import asyncio
+  import study_tools
+  rows=library.records();rows['test']['workspace']={'workspace_id':'fixture','path':str(self.root/'native')}
+  library.write_json(library.CONTROL/'vaults.json',rows)
+  library.write_json(library.CONTROL/'native-tools.json',{})
+  async def run():
+   with patch.object(study_tools,'BASE',self.root):
+    server=study_tools.make_server('test')
+    args={'source_id':'source','pdf_page':1,'crop':[0,.02,1,.2],'label':'Original source excerpt'}
+    result=await server.call_tool('source_figure',args)
+    blocks=result[0] if isinstance(result,tuple) else result.content if hasattr(result,'content') else result
+    data=json.loads(next(b.text for b in blocks if hasattr(b,'text')))
+    self.assertEqual(data['source_sha256'],self.source['sha256'])
+    self.assertIn('dt_workspace=fixture',data['image_url'])
+    self.assertTrue(any(getattr(b,'type','')=='image' for b in blocks))
+    self.assertEqual(progress.status('test')['evidence_counts'],{})
+    for change,reason in [({'pdf_page':2},'locked'),({'crop':[-.1,0,1,1]},'inside'),({'crop':[0,float('nan'),1,1]},'finite')]:
+     with self.assertRaisesRegex(Exception,reason):await server.call_tool('source_figure',{**args,**change})
+    Path(self.source['pdf']).write_bytes(Path(self.source['pdf']).read_bytes()+b'\n')
+    with self.assertRaisesRegex(Exception,'hash changed'):await server.call_tool('source_figure',args)
+  asyncio.run(run())
  def test_modal_selection_does_not_upload_digital_or_corrected_pages(self):
   self.assertEqual(source_pipeline.backend_settings('test')['backend'],'local')
   source_pipeline.backend_settings('test','modal')

@@ -218,15 +218,17 @@ def make_server(slug: str) -> FastMCP:
 
     @mcp.tool()
     def starter_lesson() -> dict:
-        """Read this vault's reviewed first-part lesson and publish its already-checked interactive companion. Returns actual diagram/video links and delivered-card state. Reuse this packet; do not recreate its assets or add duplicate cards. Prepared does not mean studied; leave its check unanswered."""
+        """Read this vault's reviewed opening lesson and delivered-card state. Publish its checked interactive companion only when one exists. Text-only lessons are valid; choose diagrams, interactivity, animation or audio for a teaching purpose, not a media quota. Reuse supplied assets and do not add duplicate cards. Prepared does not mean studied; leave its check unanswered."""
         packet=root/'library/STARTER-PART.md'
         if not packet.exists():return {'ready':False,'message':'This vault has no reviewed starter packet yet.'}
-        folder,rel=artifact_folder('starter-part1-'+slug)
         document=root/'visuals/first-part/lesson.html'
-        if not document.exists():raise ValueError('The reviewed interactive companion is missing')
-        shutil.copy2(document,folder/'lesson.html')
+        interactive_url=None
+        if document.is_file():
+            folder,rel=artifact_folder('starter-part1-'+slug)
+            shutil.copy2(document,folder/'lesson.html')
+            interactive_url=url(rel/'lesson.html')
         return {'ready':True,'learning_path':curriculum.status(slug),'lesson_markdown':packet.read_text(),
-                'interactive_url':url(rel/'lesson.html'),'cards':recall.status(slug),
+                'interactive_url':interactive_url,'cards':recall.status(slug),
                 'meaning':'Reviewed system preparation. No learner answer, review rating, mastery or route advancement.'}
 
     @mcp.tool()
@@ -428,6 +430,35 @@ def make_server(slug: str) -> FastMCP:
                 parts.append(types.ImageContent(type='image',mimeType='image/png',data=base64.b64encode(pixels).decode()))
             parts.insert(0,types.TextContent(type='text',text=json.dumps(result)))
             return types.CallToolResult(content=parts)
+
+    @mcp.tool()
+    def source_figure(source_id: str, pdf_page: int, crop: list[float], label: str) -> types.CallToolResult:
+        """Publish an unaltered crop of an actual unlocked PDF page. Inspect source_page first; crop is [left, top, right, bottom] as fractions of page width/height. Include the figure's relevant labels, legend, units and caption. Label with the actual figure/table or source-excerpt name; this renders source pixels, never invents a diagram. Returns a readable image and full-page locator; no learner progress is recorded."""
+        import math
+        source=next((s for s in sources() if s['id']==source_id),None)
+        if not source:raise ValueError('Unknown registered source.')
+        if type(pdf_page) is not int or not 1<=pdf_page<=source['pdf_pages']:raise ValueError('Use a valid physical PDF page.')
+        curriculum.require(slug,source_id,pdf_page)
+        if not isinstance(crop,list) or len(crop)!=4 or any(type(n) not in {int,float} or not math.isfinite(n) for n in crop):raise ValueError('Use four finite normalized crop coordinates.')
+        left,top,right,bottom=crop
+        if not (0<=left<right<=1 and 0<=top<bottom<=1) or (right-left)*(bottom-top)<.005:raise ValueError('Choose a readable crop inside the page; no tiny or inverted crops.')
+        if not isinstance(label,str) or not 3<=len(label.strip())<=200:raise ValueError('Use a concise actual source label.')
+        if book_library.digest(source['pdf'])!=source['sha256']:raise ValueError('Registered source hash changed; original crop refused.')
+        key='figure-'+hashlib.sha256(json.dumps([source['sha256'],pdf_page,crop]).encode()).hexdigest()[:24]
+        folder,rel=artifact_folder(key)
+        with pymupdf.open(source['pdf']) as doc:
+            page=doc[pdf_page-1];r=page.rect
+            clip=pymupdf.Rect(r.x0+left*r.width,r.y0+top*r.height,r.x0+right*r.width,r.y0+bottom*r.height)
+            scale=min(3,2200/max(clip.width,clip.height))
+            pixels=page.get_pixmap(matrix=pymupdf.Matrix(scale,scale),clip=clip,alpha=False).tobytes('png')
+        image_path=folder/'source-figure.png';image_path.write_bytes(pixels);image_path.chmod(0o600)
+        metadata={'title':source['title'],'source_id':source_id,'source_sha256':source['sha256'],'physical_pdf_page':pdf_page,
+                  'label':label.strip(),'normalized_crop':crop,'image_url':url(rel/'source-figure.png'),
+                  'rendering':'Original PDF region; no redrawing, retouching or generative modification.',
+                  'full_page_tool':{'source_id':source_id,'pdf_page':pdf_page,'show_image':True}}
+        book_library.write_json(folder/'provenance.json',metadata)
+        metadata['offline_files']=preserve(folder,rel)
+        return types.CallToolResult(content=[types.TextContent(type='text',text=json.dumps(metadata)),types.ImageContent(type='image',mimeType='image/png',data=base64.b64encode(pixels).decode())])
 
     @mcp.tool()
     def source_span(source_id: str, first_pdf_page: int, last_pdf_page: int) -> dict:
