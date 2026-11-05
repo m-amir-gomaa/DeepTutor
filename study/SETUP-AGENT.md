@@ -5,6 +5,13 @@ and `study/README.md`. Preserve existing installations, settings and learner
 records. User instructions override examples. Do not import the author's private
 paths, books, accounts, business catalogue, acceptance receipts or identity.
 
+For fresh installs first read `study/platforms/README.md` and the matching OS
+guide. Use `study/platform_setup.py inspect/init` for the private folder layout
+and launcher. The beginner workflow is in root `START-HERE.md`: perform setup
+yourself, maintain SETUP-STATUS.md, and give one necessary human action at a time.
+Default to **one Codex account and no Modal**. Do not block a first source-based
+lesson on optional provider signup, OCR weights or an animation runtime.
+
 ## Establish the learner and boundaries
 
 Ask only what is missing: disciplines, immediate goals/exams/research questions,
@@ -69,8 +76,9 @@ interactivity. Add only relevant tools, and report absent optional tools:
 | Research | Medicine/biology: PubMed and bioRxiv; broader papers: alphaXiv; technical docs: Context7/DeepWiki. Connect through Personalization, perform one relevant read operation and check OAuth again after restart. Label preprints and uncertainty. |
 | CLI apps/skills | Discover the installed in-app catalogue, inspect the actual instructions and selectively install. Core native media routes are supplied. Optional third-party harnesses need their own acceptance; do not assume the author's patched DOMShell/Obsidian clients exist. |
 
-The initial portable local execution target is Linux. For other systems, document
-which tools are unavailable and use a deliberate container/platform adaptation;
+Linux uses bubblewrap; macOS can use the explicit local container runner in
+`study/platforms/README.md`. Native Apple GPU OCR and Draw.io export follow the
+macOS guide. For other systems, document unavailable tools/platform adaptations;
 never describe untested native parity as complete. Do not globally disable
 sandboxing or install system services simply to unblock an optional renderer.
 

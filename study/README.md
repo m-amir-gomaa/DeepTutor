@@ -2,6 +2,10 @@
 
 Start with [the human guide](SETUP-HUMAN.md) or give [the agent guide](SETUP-AGENT.md)
 to your setup assistant. This branch extends upstream DeepTutor v1.7.1.
+Nontechnical learners can start with [Start here](../START-HERE.md).
+The [platform guides](platforms/README.md) cover a standard private directory
+layout, a macOS Finder launcher, native Apple Silicon OCR and optional isolated
+rendering. One Codex account is sufficient; Modal remains optional.
 The [code map](CODE-MAP.md) explains the directories and data flow; the
 [validation record](VALIDATION.md) distinguishes tested implementation from a
 new learner's own setup.
@@ -51,7 +55,8 @@ the checkout. Use one configuration and runtime home per learner installation.
 
 For browser validation, run `npm ci` in `study/` and
 `npx playwright install chromium`. For Manim/code execution, install its
-dependencies and bubblewrap on Linux. The isolated runner refuses host fallback.
+dependencies and bubblewrap on Linux, or qualify the opt-in local container
+runner on macOS. The isolated runner refuses host fallback.
 Draw.io/Inkscape/FFmpeg and an authenticated Anki MCP service are optional,
 independently verified integrations. Follow the guides rather than treating
 presence as acceptance.
@@ -59,10 +64,13 @@ presence as acceptance.
 ## Local and Modal OCR
 
 Local remains default. Install MinerU 4.1.3 into an isolated environment, download
-the Standard ONNX/llama.cpp models using its official commands, and configure
+the appropriate Standard models using its official commands, and configure
 the reviewed local wrapper and model directory. `bin/mineru-local` uses the
 configured `STUDY_MINERU_CLI` executable or `mineru-kit` on PATH. Run its model
 download explicitly before offline parsing. No automatic cloud fallback exists.
+On Apple Silicon the wrapper uses native automatic device selection unless
+explicitly configured for CPU; see the macOS guide. Existing explicit parser
+wrappers and personal installations retain their configuration.
 
 Modal is disabled by default and assumes no free credit. Configure the
 owner-approved policy, native authorization and app/profile, deploy

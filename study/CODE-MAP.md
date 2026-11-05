@@ -16,6 +16,11 @@ DeepTutor/                         Version-controlled application source
 │   └── ...                      Source fixes for OAuth/research/audio UI
 └── study/                        Shared additions
     ├── manage.py                 Initialize, attach, inspect, open
+    ├── platform_setup.py         Private first-run layout and Finder launcher
+    ├── platforms/                Agent/human OS-specific setup contracts
+    ├── mineru_local.py           Offline native Apple/CPU parser selection
+    ├── execution.py              Linux/optional local-container isolation
+    ├── render-image/             Explicit local teaching image build recipe
     ├── study_settings.py         Non-secret per-installation configuration
     ├── discipline_profiles.json  Shared goals/teaching/service preferences
     ├── prompt_catalog.json       Reusable editable prompt templates

@@ -17,7 +17,7 @@ def load():
             for v in value:check(v)
     check(raw)
     base=Path(raw.get('library_root',Path.home()/'DeepTutorStudy')).expanduser().resolve()
-    defaults={'library_root':str(base),'backend_url':'http://127.0.0.1:3781','frontend_url':'http://127.0.0.1:3782',
+    defaults={'library_root':str(base),'backend_url':'http://127.0.0.1:8001','frontend_url':'http://127.0.0.1:3782',
       'python':sys.executable,'native_library_path':'','startup_catalogue_root':str(base/'catalogues'),
       'tools':{},'modal':{'python':sys.executable,'app':'deeptutor-study-mineru','profile':'',
                         'enabled':False,'reservation_limit_usd':5,'credit_ceiling_usd':0,'reserve_usd':.25}}

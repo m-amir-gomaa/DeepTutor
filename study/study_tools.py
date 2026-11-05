@@ -31,6 +31,7 @@ import curriculum
 import source_pipeline
 import lesson_assets
 import study_settings
+import execution
 
 BASE = book_library.BASE
 INSTALL = Path(__file__).resolve().parent
@@ -162,27 +163,7 @@ def make_server(slug: str) -> FastMCP:
         return files
 
     def sandbox(folder: Path, command: list[str], timeout: int):
-        import resource
-        bwrap = native.get('bwrap')
-        if not bwrap:
-            raise RuntimeError('The isolated code runner is unavailable; no host fallback.')
-        import sys
-        mounts=[]
-        for path in ['/usr','/bin','/lib','/lib64','/nix/store',sys.prefix,'/etc/fonts']:
-            if Path(path).exists():mounts+=['--ro-bind',path,path]
-        args=[bwrap,'--die-with-parent','--unshare-all','--new-session',*mounts,
-              '--proc','/proc','--dev','/dev','--tmpfs','/tmp',
-              '--bind',str(folder),'/work','--chdir','/work',
-              '--setenv','XDG_CACHE_HOME','/tmp/cache','--setenv','MPLCONFIGDIR','/tmp/mpl',
-              '--setenv','OPENBLAS_NUM_THREADS','1','--setenv','OMP_NUM_THREADS','1',
-              '--setenv','MKL_NUM_THREADS','1',*command]
-        # Avoid BLAS reserving one large thread stack per host CPU inside the
-        # bounded address space. These are small teaching examples.
-        def limits():
-            resource.setrlimit(resource.RLIMIT_CPU,(100,100))
-            resource.setrlimit(resource.RLIMIT_FSIZE,(150*1024*1024,150*1024*1024))
-            resource.setrlimit(resource.RLIMIT_AS,(2*1024**3,2*1024**3))
-        return subprocess.run(args,capture_output=True,text=True,timeout=timeout,preexec_fn=limits)
+        return execution.run(folder,command,timeout,native)
 
     @mcp.tool()
     def orientation() -> dict:
@@ -514,8 +495,13 @@ def make_server(slug: str) -> FastMCP:
         spec = folder/'trace.json';spec.write_text(json.dumps(states))
         result = {'interactive_url':url(rel/'trace.html'),'steps':len(states),'sorted_result':states[-1]['values']}
         if render_video:
-            env = dict(os.environ,STUDY_TRACE_SPEC=str(spec))
-            done = subprocess.run([native['manim'],'-ql','--disable_caching','--media_dir',str(folder/'manim'),str(INSTALL/'trace_scene.py'),'StudyTrace'],env=env,capture_output=True,text=True,timeout=180)
+            if study_settings.load().get('execution',{}).get('backend')=='container':
+                scene=(INSTALL/'trace_scene.py').read_text().replace("os.environ['STUDY_TRACE_SPEC']",repr('/work/trace.json'))
+                (folder/'scene.py').write_text(scene)
+                done=sandbox(folder,['manim','-ql','--disable_caching','--media_dir','/work/manim','/work/scene.py','StudyTrace'],180)
+            else:
+                env = dict(os.environ,STUDY_TRACE_SPEC=str(spec))
+                done = subprocess.run([native['manim'],'-ql','--disable_caching','--media_dir',str(folder/'manim'),str(INSTALL/'trace_scene.py'),'StudyTrace'],env=env,capture_output=True,text=True,timeout=180)
             if done.returncode:
                 raise RuntimeError('Manim rendering failed: '+done.stderr[-1200:])
             video = next((folder/'manim').rglob('StudyTrace.mp4'))
@@ -531,7 +517,7 @@ def make_server(slug: str) -> FastMCP:
             raise ValueError('Use a valid scene class and code under 50 KB.')
         folder,rel=artifact_folder()
         (folder/'scene.py').write_text(scene_code)
-        manim=native.get('manim')
+        manim=execution.tool(native,'manim')
         if not manim:raise RuntimeError('Manim is unavailable.')
         done=sandbox(folder,[manim,'-qm','--disable_caching','--media_dir','/work/media','/work/scene.py',scene_name],180)
         if done.returncode:
@@ -547,7 +533,8 @@ def make_server(slug: str) -> FastMCP:
         if len(code)>30000:raise ValueError('Keep demonstrations under 30 KB.')
         folder,rel=artifact_folder()
         (folder/'example.py').write_text(code)
-        python=native['python3']
+        python=execution.tool(native,'python3')
+        if not python:raise RuntimeError('The isolated Python runner is unavailable.')
         done=sandbox(folder,[python,'/work/example.py'],30)
         (folder/'result.json').write_text(json.dumps({'exit_code':done.returncode,'stdout':done.stdout[:16000],'stderr':done.stderr[-3000:]}))
         return {'exit_code':done.returncode,'stdout':done.stdout[:16000],'stderr':done.stderr[-3000:],'source':str(folder/'example.py'),'offline_files':preserve(folder,rel),'status':'generated demonstration, not learner performance'}

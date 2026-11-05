@@ -2,7 +2,17 @@
 
 ## Personalized study fork
 
-For setup of this fork, read `study/SETUP-AGENT.md` and `study/README.md` first.
+For setup of this fork, read `START-HERE.md`, `study/SETUP-AGENT.md` and
+`study/platforms/README.md` first, then the matching OS guide. The learner may
+be nontechnical: perform technical steps and communicate only the immediate
+human input/sign-in/admin action needed. Default to **one Codex account, no
+Modal, no paid API and no assumed cloud credit**. A second account and Modal
+are optional; never require the original author's providers. On an M3 Mac,
+detect RAM and use native Apple Silicon MinerU after actual qualification;
+do not force Linux CPU settings or Xvfb onto macOS. Keep generated-code
+isolation; missing optional renderers do not block source-text/figure study.
+Use the standard private folder layout/launcher and maintain SETUP-STATUS.md.
+Clone/use this fork's `study-standardization` branch, not upstream dev examples.
 The portable study layer is in `study/`; learner data and native credentials
 stay outside the checkout. Choose discipline profiles per learner, preserve
 existing routes/progress, and distinguish installed, configured, authorized and

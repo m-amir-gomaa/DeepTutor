@@ -85,7 +85,8 @@ def attach():
         root=Path(record['path']);profile=profiles()[record.get('profile','general')]
         instructions=(root/'LEARNER.md').read_text()+'\nUse the scoped study service: orientation, learning_path, source_page, notes/cards and study_setup. Read library/SETUP-HUMAN.md for operation. In a new vault use plan_first_unit only for the learner-selected introductory source. Never invent readiness, learner answers or reviews.\n'
         service='study_'+slug.replace('-','_')
-        env={'DEEPTUTOR_STUDY_CONFIG':str(study_settings.config_path().resolve()),'PYTHONUNBUFFERED':'1'}
+        env={'DEEPTUTOR_STUDY_CONFIG':str(study_settings.config_path().resolve()),'PYTHONUNBUFFERED':'1',
+             'STUDY_PYTHON':conf['python'],'PATH':str(Path(conf['python']).parent)+os.pathsep+os.environ.get('PATH','')}
         if conf['native_library_path']:env['LD_LIBRARY_PATH']=conf['native_library_path']
         api('/api/settings/mcp/servers/'+service,{'type':'stdio','command':conf['python'],'args':[str(ROOT/'study_tools.py'),'--vault',slug],
                                               'env':env,'enabled':True,'tool_timeout':390},'PUT')

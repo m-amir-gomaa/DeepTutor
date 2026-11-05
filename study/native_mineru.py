@@ -14,7 +14,13 @@ MODELS=Path(study_settings.load().get('mineru_models',Path.home()/'.mineru/model
 REQUIRED=['MinerU2.5-Pro-2605-1.2B-GGUF/MinerU2.5-Pro-2605-1.2B-Q8_0.gguf',
           'MinerU2.5-Pro-2605-1.2B-GGUF/mmproj-MinerU2.5-Pro-2605-1.2B-Q8_0.gguf',
           'MinerU-4_models_onnx/Layout/PP-DocLayoutV2/inference.onnx']
-def ready():return Path(WRAPPER).is_file() and all((MODELS/p).is_file() and (MODELS/p).stat().st_size>1_000_000 for p in REQUIRED)
+def ready():
+    if not Path(WRAPPER).is_file():return False
+    if Path(WRAPPER).resolve()==(INSTALL/'bin/mineru-local').resolve():
+        from mineru_local import ready as local_ready
+        return local_ready()
+    # Preserve the original explicitly configured CPU wrapper's offline check.
+    return all((MODELS/p).is_file() and (MODELS/p).stat().st_size>1_000_000 for p in REQUIRED)
 def convert(source,output):
     source=Path(source).resolve();output=Path(output).resolve()
     if source.suffix.lower()!='.pdf':raise ValueError('This pinned study adapter accepts PDF parts only')

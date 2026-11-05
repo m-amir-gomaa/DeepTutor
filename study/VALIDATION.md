@@ -1,5 +1,27 @@
 # Verification of this implementation
 
+## Portable first-run and macOS additions, 2026-11-05
+
+The local portable suite now passes **101 tests**, including 12 platform/layout,
+Mac Draw.io routing, local-only MinerU, generated-code isolation/cleanup and
+real synthetic PDF import/hash/bookmark/render/search/subject-isolation checks.
+These fixtures preserve learner edits, single-account defaults and disabled
+cloud processing. Fresh default backend origin matches upstream port 8001;
+explicit existing installation URLs are preserved.
+
+The M3 setup contract, nontechnical Start Here, private layout and Finder launcher
+are versioned. CI separately checks Apple Silicon setup and a locally built
+container image's actual Python/network/write limits/Manim output/timeout path.
+Record the CI result separately from the local suite. Physical M3 GPU OCR,
+native app integration and the new learner's authorization remain her setup
+agent's checks; a mocked platform test or hosted runner does not establish them.
+
+The author's existing Linux installation retains its explicit local parser,
+bubblewrap route, accounts, budgets and personal library. No new model call,
+model download, cloud deployment or learner progress followed from these changes.
+
+## Earlier implementation acceptance
+
 The portable study layer was developed against upstream DeepTutor **v1.7.1**.
 Its source was started with a separate synthetic learner runtime. A medical
 vault and a research vault were created and attached through the native API.

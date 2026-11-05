@@ -5,6 +5,11 @@ discipline profiles, reusable prompts, chronological routes, Markdown/Obsidian
 notes, Anki delivery, checked visual tools and optional Modal PDF processing.
 Each learner supplies their own books and authorizes their own providers.
 
+If you want the agent to do the setup, use [Start here](https://github.com/m-amir-gomaa/DeepTutor/blob/study-standardization/START-HERE.md).
+It handles the technical work and gives you one necessary sign-in or permission
+step at a time. **One Codex account is enough. Modal is optional and disabled
+by default.** You do not need a GitHub account to use the public fork.
+
 ## Open the standard controls
 
 Open DeepTutor, then the **Study setup** page:
@@ -17,11 +22,15 @@ You can also ask the tutor: “Open my study setup and account controls.”
 
 ## Fresh installation from the fork
 
-The initial supported deployment target for the added local execution layer is
-Linux. Native DeepTutor supports additional platforms; the bubblewrap-based
-runner and native media tools need platform-specific substitutes there.
+Use the [platform guide](https://github.com/m-amir-gomaa/DeepTutor/blob/study-standardization/study/platforms/README.md)
+for the standard private directory layout and launcher. On an M3 MacBook the
+agent checks native arm64 Python, available memory and Apple GPU OCR. Generated
+code uses a separately configured local container runner; Linux uses bubblewrap.
+Missing optional OCR/animation tools do not block original text and figure study.
+Native Windows use of the extra layer is not qualified; use WSL2.
 
-1. Follow the fork's upstream `docs-for-dev/AGENT_SETUP.md` to create a Python
+1. Use this fork's `study-standardization` branch. Follow its upstream
+   `docs-for-dev/AGENT_SETUP.md` dependency instructions to create a Python
    3.12 environment, install `requirements/full.txt`, install the checkout with
    `python -m pip install -e . --no-deps`, and install/build the web frontend.
    Use the fork's `study-standardization` branch, based on v1.7.1.
@@ -50,6 +59,9 @@ The standard configuration has no user books, OAuth grants, API keys, medical
 records, prior chats or achievements. Your installation stays separate from the
 author's personal setup. `installation.json` and `installation.*.json` are local
 configuration files and excluded from Git. Credentials stay in native stores.
+With the standard helper, code lives in `~/DeepTutor/app`, your books/notes in
+`~/DeepTutor/library`, private settings in `config`, and chats/provider grants in
+`runtime`. Double-click `~/DeepTutor/Start Study.command` on macOS after setup.
 
 ## The daily workflow
 
@@ -86,6 +98,8 @@ disable that fallback. Each account keeps its own allowance and reset time.
 Prompts include **Identify my current account**, **Use the secondary account**
 and **Restore automatic account selection**. If neither model can run, use the
 page yourself; it needs the local backend, not a successful model call.
+With one account, keep the primary/automatic setting. “Secondary” applies only
+if you choose to add and authorize another account later.
 
 ## Modal tokens and optional OCR
 
