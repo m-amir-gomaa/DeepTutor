@@ -75,7 +75,7 @@ class BrowserValidation(unittest.TestCase):
   cls.good='''<!doctype html><html><head><meta name="viewport" content="width=device-width"></head><body><h1>A complete source-grounded demonstration</h1><p id="state">The first state explains what changes.</p><button onclick="document.getElementById('state').textContent='The second state has changed.'">Next</button><button onclick="document.getElementById('state').textContent='The first state explains what changes.'">Reset</button><script>const ready=true;</script></body></html>'''
  def check(self,html):
   import os,study_settings
-  env={**os.environ,'STUDY_CHROMIUM':study_settings.tool('chromium',''),
+  env={**os.environ,'STUDY_CHROMIUM':study_settings.browser_executable(),
        'STUDY_PLAYWRIGHT_MODULE':study_settings.tool('playwright-module','playwright')}
   result=subprocess.run(['node',str(Path(__file__).with_name('validate_html.cjs'))],input=json.dumps({'html':html}),capture_output=True,text=True,timeout=35,env=env)
   return json.loads(result.stdout)

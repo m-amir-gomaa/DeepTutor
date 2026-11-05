@@ -2,7 +2,7 @@
 
 ## Portable first-run and macOS additions, 2026-11-05
 
-The local portable suite now passes **101 tests**, including 12 platform/layout,
+The current local portable suite passes **102 tests**, including 13 platform/layout,
 Mac Draw.io routing, local-only MinerU, generated-code isolation/cleanup and
 real synthetic PDF import/hash/bookmark/render/search/subject-isolation checks.
 These fixtures preserve learner edits, single-account defaults and disabled
@@ -21,6 +21,17 @@ bubblewrap route, accounts, budgets and personal library. No new model call,
 model download, cloud deployment or learner progress followed from these changes.
 
 ## Earlier implementation acceptance
+
+The first hosted run at `4d9e37ca` passed the macOS ARM64 setup/PDF fixtures
+and the actual Linux container's Python/network/write restrictions, Manim MP4
+and timeout path. Its full Linux suite caught a browser-driver issue: tests
+and mode validation auto-discovered a system Chromium wrapper instead of using
+the Playwright-managed browser. The browser process crashed in a sandboxed
+srcdoc frame. The follow-up uses the managed browser by default and preserves
+intentional native overrides; sandbox/content/interaction checks remain enabled.
+The local follow-up passed all 102 checks with the intentional NixOS native
+browser override. NixOS environments with a separately packaged browser require their explicit
+configured executable; an incompatible/missing managed browser fails visibly.
 
 The portable study layer was developed against upstream DeepTutor **v1.7.1**.
 Its source was started with a separate synthetic learner runtime. A medical

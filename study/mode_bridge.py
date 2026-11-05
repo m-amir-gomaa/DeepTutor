@@ -129,7 +129,7 @@ def validate_html(payload):
     try:
         run=subprocess.run(['node',str(Path(__file__).with_name('validate_html.cjs'))],
             input=json.dumps({'html':payload}),text=True,capture_output=True,timeout=30,
-            env={**os.environ,'STUDY_CHROMIUM':study_settings.tool('chromium',''),'STUDY_PLAYWRIGHT_MODULE':study_settings.tool('playwright-module','playwright')})
+            env={**os.environ,'STUDY_CHROMIUM':study_settings.browser_executable(),'STUDY_PLAYWRIGHT_MODULE':study_settings.tool('playwright-module','playwright')})
         report=json.loads(run.stdout)
         target=library.CONTROL/'20261104/html-validations'/ (hashlib.sha256(payload.encode()).hexdigest()+'.json')
         library.write_json(target,report)

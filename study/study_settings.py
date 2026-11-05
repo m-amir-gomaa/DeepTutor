@@ -31,5 +31,10 @@ def load():
     return defaults
 def tool(name,default=None):
     return load()['tools'].get(name) or shutil.which(name) or default
+def browser_executable():
+    # Playwright's installed browser is the portable default. Arbitrary system
+    # Chromium/Edge wrappers can mismatch the tested protocol/build. Preserve
+    # explicit native overrides, including the owner's NixOS configuration.
+    return load()['tools'].get('chromium') or os.environ.get('STUDY_CHROMIUM','')
 def library_root():return Path(load()['library_root'])
 def origin(which='backend'):return load()[which+'_url'].rstrip('/')

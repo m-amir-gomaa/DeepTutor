@@ -15,6 +15,12 @@ import study_settings
 
 
 class PlatformSetup(unittest.TestCase):
+    def test_browser_defaults_to_playwright_and_preserves_explicit_native_override(self):
+        with patch.object(study_settings,'load',return_value={'tools':{}}),patch.dict(os.environ,{'STUDY_CHROMIUM':''}),patch.object(study_settings.shutil,'which',side_effect=AssertionError('Do not auto-select system Chromium')):
+            self.assertEqual(study_settings.browser_executable(),'')
+        with patch.object(study_settings,'load',return_value={'tools':{'chromium':'/configured/browser'}}):
+            self.assertEqual(study_settings.browser_executable(),'/configured/browser')
+
     def test_real_pdf_import_hash_text_lookup_and_subject_isolation(self):
         import pymupdf
         import library
