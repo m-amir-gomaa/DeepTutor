@@ -9,6 +9,13 @@ These fixtures preserve learner edits, single-account defaults and disabled
 cloud processing. Fresh default backend origin matches upstream port 8001;
 explicit existing installation URLs are preserved.
 
+Hosted acceptance [run 42025735828](https://github.com/m-amir-gomaa/DeepTutor/actions/runs/42025735828)
+passed at code commit `51fffde2` on 2026-11-05: **all three jobs succeeded**.
+The full Linux suite passed all 102 tests; native macOS ARM64 passed the 13
+platform/PDF fixtures; the real local container built and passed Python output,
+network/read-only-root restrictions, Manim MP4 and timeout/cleanup checks.
+No model account, cloud compute or private learner material was used by CI.
+
 The M3 setup contract, nontechnical Start Here, private layout and Finder launcher
 are versioned. CI separately checks Apple Silicon setup and a locally built
 container image's actual Python/network/write limits/Manim output/timeout path.
