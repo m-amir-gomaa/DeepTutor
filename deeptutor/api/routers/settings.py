@@ -991,7 +991,7 @@ async def codex_pool_status(dt_workspace: str | None = None):
 
 
 class CodexAccountSelection(BaseModel):
-    account: Literal["auto", "primary", "secondary"]
+    account: Literal["auto", "primary", "secondary", "temporary"]
     allow_fallback: bool = True
 
 
@@ -1034,6 +1034,29 @@ async def codex_pool_secondary_start():
         raise HTTPException(status_code=409, detail="Backup account is already connected; existing authorization preserved.")
     try:
         return await service.start_login()
+    except CodexAuthError as exc:
+        raise _codex_http_exception(exc) from None
+
+
+@router.post("/providers/openai-codex/pool/temporary/start")
+async def codex_pool_temporary_start():
+    _require_codex_oauth_actor()
+    service = _codex_pool_module().temporary()
+    if service.public_status()["connection"] == "connected":
+        raise HTTPException(status_code=409, detail="Temporary account is already connected; disconnect it before replacing it.")
+    try:
+        return await service.start_login()
+    except CodexAuthError as exc:
+        raise _codex_http_exception(exc) from None
+
+
+@router.post("/providers/openai-codex/pool/temporary/logout")
+async def codex_pool_temporary_logout(dt_workspace: str | None = None):
+    _require_codex_oauth_actor()
+    from deeptutor.services.workspace.context import workspace_context
+    try:
+        with workspace_context(dt_workspace):
+            return await _codex_pool_module().disconnect_temporary()
     except CodexAuthError as exc:
         raise _codex_http_exception(exc) from None
 

@@ -21,8 +21,8 @@ class Service:
 class PoolTests(unittest.IsolatedAsyncioTestCase):
  def setUp(self):
   self.temp=tempfile.TemporaryDirectory();self.path=Path(self.temp.name)/'pool'
-  self.a=Service('fictional-primary');self.b=Service('fictional-secondary')
-  self.patches=[patch.object(pool,'root',lambda:self.path),patch.object(pool,'get_codex_oauth_service',lambda:self.a),patch.object(pool,'secondary',lambda:self.b)]
+  self.a=Service('fictional-primary');self.b=Service('fictional-secondary');self.c=Service('fictional-temporary')
+  self.patches=[patch.object(pool,'root',lambda:self.path),patch.object(pool,'get_codex_oauth_service',lambda:self.a),patch.object(pool,'secondary',lambda:self.b),patch.object(pool,'temporary',lambda:self.c),patch.object(pool,'current_workspace_id',lambda:'fixture-workspace')]
   for p in self.patches:p.start()
  def tearDown(self):
   for p in reversed(self.patches):p.stop()
@@ -96,5 +96,34 @@ class PoolTests(unittest.IsolatedAsyncioTestCase):
   service=object.__new__(CodexOAuthService);service._store=SimpleNamespace(load_credentials=lambda:SimpleNamespace(id_token='header.'+payload+'.signature'))
   result=service.public_identity();self.assertEqual(set(result),{'name','email'});self.assertEqual(result['name'],'FixtureName')
   self.assertNotIn('never-return-this',str(result));self.assertNotIn('private-id',str(result))
+
+ async def test_temporary_account_requires_explicit_selection_and_never_falls_back(self):
+  self.assertIs(pool.preferred(self.a),self.a)
+  pool.select('temporary',True)
+  self.assertIs(pool.preferred(self.a),self.c)
+  self.assertFalse(pool.selection()['allow_fallback'])
+  invoke=AsyncMock();error=provider.CodexHTTPError(429,'Temporary allowance exhausted')
+  self.assertIsNone(await pool.try_other(self.c,error,await self.c.get_token(),'gpt-6.1-sol','low',invoke))
+  invoke.assert_not_awaited()
+  with patch.object(pool,'current_workspace_id',lambda:'other-vault'):
+   self.assertIs(pool.preferred(self.a),self.a)
+
+ async def test_disconnect_temporary_restores_prior_choices_without_touching_saved_accounts(self):
+  pool.select('secondary',False);pool.select('temporary',True)
+  self.c.logout=AsyncMock();self.a.logout=AsyncMock();self.b.logout=AsyncMock()
+  await pool.disconnect_temporary()
+  self.c.logout.assert_awaited_once();self.a.logout.assert_not_awaited();self.b.logout.assert_not_awaited()
+  self.assertEqual(pool.selection()['account'],'secondary');self.assertFalse(pool.selection()['allow_fallback'])
+
+ async def test_temporary_logout_refusal_preserves_routing(self):
+  pool.select('temporary',False)
+  self.c.logout=AsyncMock(side_effect=CodexAuthError('inference_in_progress','Busy',409))
+  with self.assertRaises(CodexAuthError):await pool.disconnect_temporary()
+  self.assertEqual(pool.selection()['account'],'temporary')
+
+ async def test_temporary_account_cannot_become_the_global_default(self):
+  with patch.object(pool,'current_workspace_id',lambda:''):
+   with self.assertRaises(ValueError):pool.select('temporary')
+   self.assertEqual(pool.selection()['account'],'auto')
 
 if __name__=='__main__':unittest.main()

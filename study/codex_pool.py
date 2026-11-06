@@ -1,4 +1,4 @@
-"""Owner-authorized two-account failover using separate native OAuth services.
+"""Owner-authorized account selection using separate native OAuth services.
 
 No credential import, copying, API-key billing or model substitution. Only
 DeepTutor's own fresh OAuth grants enter the pool. Primary credentials stay put.
@@ -16,7 +16,7 @@ import library
 from contextlib import contextmanager
 from deeptutor.services.workspace.context import current_workspace_id
 
-SECONDARY='secondary';_HTTP={}
+SECONDARY='secondary';TEMPORARY='temporary';_HTTP={}
 def root():return auth._codex_secrets_root()/'private'/'study-codex-pool'
 def check_root():
     base=root()
@@ -45,11 +45,18 @@ def selection():
     d=state();choices=d.get('selections',{})
     return choices.get(current_workspace_id(),choices.get('',{'account':'auto','allow_fallback':True}))
 def select(account,allow_fallback=True):
-    if account not in {'auto','primary','secondary'} or not isinstance(allow_fallback,bool):
-        raise ValueError('Choose auto, primary or secondary and a boolean allow_fallback.')
-    service=get_codex_oauth_service() if account=='primary' else secondary() if account=='secondary' else None
+    if account not in {'auto','primary','secondary','temporary'} or not isinstance(allow_fallback,bool):
+        raise ValueError('Choose auto, primary, secondary or temporary and a boolean allow_fallback.')
+    if account==TEMPORARY and not current_workspace_id():
+        raise ValueError('Select a specific workspace before using a temporary account.')
+    service=get_codex_oauth_service() if account=='primary' else secondary() if account=='secondary' else temporary() if account==TEMPORARY else None
     if service is not None and not ready(service):raise ValueError('That account is not connected. Authorize it in the account page first.')
     with locked_state() as d:
+        if account==TEMPORARY:
+            previous=selection()
+            if previous['account']!=TEMPORARY:
+                d.setdefault('before_temporary',{})[current_workspace_id()]=previous
+            allow_fallback=False
         d.setdefault('selections',{})[current_workspace_id()]={'account':account,'allow_fallback':allow_fallback,'changed_at':library.now()}
     return public_status()
 def record_use(service,model,session_id=None):
@@ -58,10 +65,15 @@ def record_use(service,model,session_id=None):
     with locked_state() as d:d.setdefault('last_success',{})[current_workspace_id()]=info
     return info
 def secondary():
+    return independent_service(SECONDARY)
+def temporary():
+    return independent_service(TEMPORARY)
+def independent_service(name):
     # Register with the native callback router. Each owner gets an independent
     # service, OAuth state, generation-safe store and model catalog.
     pool_root=check_root();pool_root.mkdir(parents=True,exist_ok=True,mode=0o700);pool_root.chmod(0o700)
-    base=pool_root/'secondary-user';key='study-pool:'+str(base)
+    if name not in {SECONDARY,TEMPORARY}:raise ValueError('Unknown independent account slot.')
+    base=pool_root/(name+'-user');key='study-pool:'+str(base)
     if key not in auth._SERVICE_INSTANCES:
         if base.is_symlink():raise CodexAuthError('unsafe_storage_path','Unsafe account-pool directory.',500)
         base.mkdir(parents=True,exist_ok=True,mode=0o700);base.chmod(0o700)
@@ -71,11 +83,17 @@ def secondary():
              ModelCatalogService(base/'model-catalog.json'),oauth_client=CodexOAuthClient(client),
              callback_forward_port=auth.load_system_settings()['frontend_port'])
     return auth._SERVICE_INSTANCES[key]
-def slot(service):return 'primary' if service is get_codex_oauth_service() else SECONDARY
+def slot(service):
+    if service is get_codex_oauth_service():return 'primary'
+    return SECONDARY if service is secondary() else TEMPORARY
 def ready(service):return service.public_status()['connection']=='connected'
 def available(name):return state().get('cooldowns',{}).get(name,{}).get('until',0)<=time.time()
 def preferred(primary):
-    backup=secondary();choice=selection();wanted=backup if choice['account']==SECONDARY else primary
+    choice=selection()
+    # Temporary authorizations are used only by an explicit workspace selection.
+    # They never silently join the ordinary two-account fallback pool.
+    if choice['account']==TEMPORARY:return temporary()
+    backup=secondary();wanted=backup if choice['account']==SECONDARY else primary
     other=primary if wanted is backup else backup
     return other if choice['allow_fallback'] and state().get('enabled',True) and (not available(slot(wanted)) or not ready(wanted)) and ready(other) and available(slot(other)) else wanted
 def eligible(error):
@@ -94,6 +112,7 @@ def succeeded(service):
     with locked_state() as d:d.get('cooldowns',{}).pop(slot(service),None)
 async def try_other(failed_service,error,failed_token,model,reasoning,invoke):
     """At most one other account, only after an HTTP rejection before streaming."""
+    if slot(failed_service)==TEMPORARY:return None
     if not state().get('enabled',True) or not selection()['allow_fallback'] or not eligible(error):return None
     failed(failed_service,error)
     primary=get_codex_oauth_service();other=secondary() if failed_service is primary else primary
@@ -123,7 +142,7 @@ async def try_other(failed_service,error,failed_token,model,reasoning,invoke):
             raise
 def public_status():
     d=state();rows=[]
-    for name,s in [('primary',get_codex_oauth_service()),(SECONDARY,secondary())]:
+    for name,s in [('primary',get_codex_oauth_service()),(SECONDARY,secondary()),(TEMPORARY,temporary())]:
         status=s.public_status()
         rows.append({'slot':name,'identity':s.public_identity(),'connection':status['connection'],'model_count':max(status['model_count'],len(status.get('models',[]))),
                      'operation_state':status.get('operation_state'),'error_code':status.get('error_code'),
@@ -131,15 +150,27 @@ def public_status():
     return {'enabled':d.get('enabled',True),'selection':selection(),'selection_scope':'this workspace' if current_workspace_id() else 'owner default',
             'effective_next_slot':slot(preferred(get_codex_oauth_service())),
             'last_success':d.get('last_success',{}).get(current_workspace_id()),
-            'accounts':rows,'same_model':True,'separate_api_billing':False}
+            'accounts':rows,'same_model':True,'separate_api_billing':False,'temporary_explicit_only':True}
 
 async def checked_public_status():
     d=public_status();d['distinct_accounts']=None
-    if all(a['connection']=='connected' for a in d['accounts']):
+    if all(a['connection']=='connected' for a in d['accounts'][:2]):
         try:
             a=await get_codex_oauth_service().get_token();b=await secondary().get_token()
             d['distinct_accounts']=a.account_id!=b.account_id
         except CodexAuthError:pass
     return d
+
+async def disconnect_temporary():
+    # Native logout refuses active inference and clears/revokes only this grant.
+    await temporary().logout()
+    with locked_state() as d:
+        previous=d.get('before_temporary',{})
+        for workspace,choice in d.get('selections',{}).items():
+            if choice.get('account')==TEMPORARY:
+                d['selections'][workspace]=previous.get(workspace,{'account':'auto','allow_fallback':True})
+        d.pop('before_temporary',None)
+        d.get('cooldowns',{}).pop(TEMPORARY,None)
+    return public_status()
 
 PAGE=Path(__file__).with_name('codex_accounts.html').read_text()

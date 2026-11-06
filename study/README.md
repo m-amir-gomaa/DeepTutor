@@ -94,3 +94,16 @@ Core fixes are integrated into source; no absolute-path patching of
 site-packages is needed here. Optional third-party app harness fixes from the
 author's machine are not vendored and require version-specific acceptance.
 No books, business registries, credentials, chats or learner progress are bundled.
+# Optional temporary Codex account
+
+The Codex account page supports an independent **Temporary** slot alongside the
+two saved slots. Use its native **Connect temporary account** action; do not copy
+another client's grants. Select it only inside the intended workspace. Temporary
+selection disables fallback and cannot become the owner-wide default, so other
+workspaces do not silently consume that authorization.
+
+After the authorized job, use **Disconnect temporary account**. Native logout
+refuses active inference, removes that grant and restores the prior workspace
+selection. Both saved account authorizations remain independent. A successful
+connection does not establish model access or available quota; check one real
+request and the page's actual-use record. No API-key billing fallback is added.

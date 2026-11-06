@@ -71,3 +71,20 @@ must authorize their own model/services and qualify the renderers, Anki delivery
 native modes and optional cloud route they actually choose to use. Clinical
 correctness of future generated medical explanations is not certified by these
 software tests. The included agent guide requires source/evidence checking.
+# 7 November 2026 — temporary account extension
+
+The scoped account suite passes 17 tests; the complete portable study suite passes
+106 tests. New checks cover explicit workspace-only temporary selection, disabled
+fallback, saved-account preservation, restoration on disconnect and refusal to
+disconnect active inference. Existing two-account behavior remains exercised.
+
+The actual local account page loads. A separate browser fixture exercises third
+slot visibility, explicit selection, disabled fallback and disconnect restoration
+with zero runtime errors. Full-page desktop captures at 1280 and 1920 widths were
+reviewed independently: **ship** for this ordinary control-page extension. These
+connected-state captures use fictional identities and do not prove OAuth or quota.
+
+An owner-assisted fresh native authorization and an actual selected-model request
+were separately observed locally. Private identities, grants, learner books and
+turn logs are excluded from this repository. No claim of universal future provider
+availability or all-mode requalification follows from this account change.

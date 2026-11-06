@@ -244,7 +244,7 @@ def make_server(slug: str) -> FastMCP:
         return account_api()
 
     @mcp.tool()
-    def select_codex_account(account: Literal['auto','primary','secondary'], allow_fallback: bool = True) -> dict:
+    def select_codex_account(account: Literal['auto','primary','secondary','temporary'], allow_fallback: bool = True) -> dict:
         """Only on the owner's explicit account-switch request: select the Codex account for subsequent model requests in THIS workspace. auto prefers primary; allow_fallback=False means this account only. The current response is already running on its original account. Keeps the exact model and separate account limits; never signs in or enables API billing."""
         return account_api({'account':account,'allow_fallback':allow_fallback})
 
