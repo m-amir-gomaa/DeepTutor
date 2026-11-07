@@ -36,5 +36,8 @@ def browser_executable():
     # Chromium/Edge wrappers can mismatch the tested protocol/build. Preserve
     # explicit native overrides, including the owner's NixOS configuration.
     return load()['tools'].get('chromium') or os.environ.get('STUDY_CHROMIUM','')
+def browser_validation_env():
+    return {**os.environ,'STUDY_CHROMIUM':browser_executable(),
+            'STUDY_PLAYWRIGHT_MODULE':tool('playwright-module','playwright')}
 def library_root():return Path(load()['library_root'])
 def origin(which='backend'):return load()[which+'_url'].rstrip('/')

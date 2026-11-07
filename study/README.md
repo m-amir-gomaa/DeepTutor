@@ -102,8 +102,12 @@ another client's grants. Select it only inside the intended workspace. Temporary
 selection disables fallback and cannot become the owner-wide default, so other
 workspaces do not silently consume that authorization.
 
-After the authorized job, use **Disconnect temporary account**. Native logout
-refuses active inference, removes that grant and restores the prior workspace
-selection. Both saved account authorizations remain independent. A successful
+Keep the slot connected for as long as the owner requests; it has no automatic
+end-of-job logout. When the owner asks to remove it, finish active turns, open
+the account page for that workspace and use **Disconnect temporary account**.
+Native logout refuses active inference, removes that grant and restores the
+prior workspace selection. Verify that Temporary is disconnected and both saved
+accounts remain connected. This does not log out a separate host Codex client.
+A successful
 connection does not establish model access or available quota; check one real
 request and the page's actual-use record. No API-key billing fallback is added.

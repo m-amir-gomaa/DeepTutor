@@ -488,7 +488,7 @@ def make_server(slug: str) -> FastMCP:
         states = sort_trace(values)
         folder,rel = artifact_folder()
         document=trace_html(states)
-        checked=subprocess.run(['node',str(INSTALL/'validate_html.cjs')],input=json.dumps({'html':document}),capture_output=True,text=True,timeout=35)
+        checked=subprocess.run(['node',str(INSTALL/'validate_html.cjs')],input=json.dumps({'html':document}),capture_output=True,text=True,timeout=35,env=study_settings.browser_validation_env())
         validation=json.loads(checked.stdout)
         if not validation.get('ok'):raise RuntimeError('Trace browser validation failed: '+str(validation.get('errors')))
         (folder/'trace.html').write_text(document)
@@ -498,10 +498,10 @@ def make_server(slug: str) -> FastMCP:
             if study_settings.load().get('execution',{}).get('backend')=='container':
                 scene=(INSTALL/'trace_scene.py').read_text().replace("os.environ['STUDY_TRACE_SPEC']",repr('/work/trace.json'))
                 (folder/'scene.py').write_text(scene)
-                done=sandbox(folder,['manim','-ql','--disable_caching','--media_dir','/work/manim','/work/scene.py','StudyTrace'],180)
+                done=sandbox(folder,['manim','-qm','--disable_caching','--media_dir','/work/manim','/work/scene.py','StudyTrace'],180)
             else:
                 env = dict(os.environ,STUDY_TRACE_SPEC=str(spec))
-                done = subprocess.run([native['manim'],'-ql','--disable_caching','--media_dir',str(folder/'manim'),str(INSTALL/'trace_scene.py'),'StudyTrace'],env=env,capture_output=True,text=True,timeout=180)
+                done = subprocess.run([native['manim'],'-qm','--disable_caching','--media_dir',str(folder/'manim'),str(INSTALL/'trace_scene.py'),'StudyTrace'],env=env,capture_output=True,text=True,timeout=180)
             if done.returncode:
                 raise RuntimeError('Manim rendering failed: '+done.stderr[-1200:])
             video = next((folder/'manim').rglob('StudyTrace.mp4'))

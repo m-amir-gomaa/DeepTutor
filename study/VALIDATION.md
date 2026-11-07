@@ -88,3 +88,20 @@ An owner-assisted fresh native authorization and an actual selected-model reques
 were separately observed locally. Private identities, grants, learner books and
 turn logs are excluded from this repository. No claim of universal future provider
 availability or all-mode requalification follows from this account change.
+
+## Shared browser routing and trace readability, 7 November 2026
+
+The portable suite passes **107 tests** after a real insertion-trace call exposed
+a missing configured-browser environment in that tool's execution gate. Both the
+general HTML validator and insertion tool now use the same browser configuration;
+the managed Playwright default remains unchanged. A regression exercises the
+actual scoped MCP tool and checks propagation of explicit browser/module paths.
+
+The trusted insertion-sort renderer now shows the held key, logical gap,
+zero-based indices and step counter, replaces sentences without glyph morphing,
+and holds readable states in a 720p render. A local 20-state example completed a
+real browser control/keyboard check and a 1280×720, 27.2-second Manim render;
+representative initial, middle and final frames were inspected. These checks
+qualify that artifact and the affected routing, not arbitrary future teaching
+content or all optional modes. No private book material or provider grant is
+included in source.
