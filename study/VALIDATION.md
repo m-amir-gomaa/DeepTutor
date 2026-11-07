@@ -105,3 +105,10 @@ representative initial, middle and final frames were inspected. These checks
 qualify that artifact and the affected routing, not arbitrary future teaching
 content or all optional modes. No private book material or provider grant is
 included in source.
+
+Hosted [run 42350966619](https://github.com/m-amir-gomaa/DeepTutor/actions/runs/42350966619)
+passed at code commit `1718c233`: all **107 portable tests**, the macOS ARM64
+setup/PDF fixtures and the actual isolated-container renderer checks succeeded.
+Those container checks cover output, network/read-only-root limits, Manim video
+and timeout cleanup. They do not establish physical M3 GPU OCR or a fresh
+learner's native app/service authorization.
