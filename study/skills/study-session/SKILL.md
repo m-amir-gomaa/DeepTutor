@@ -77,7 +77,7 @@ Markdown/images and updates page search. Ordinary text spans are up to eight
 pages; slow OCR/layout pages run one per call. Inspect extraction warnings and
 the original page image, especially formulas, table cells and IPA. Keep a
 source-linked correction and raw output when fixing an observed error. A parser
-success is not proof of fidelity. Only explicitly selected Modal OCR uploads its one-page subset; never upload whole books or
+success is not proof of fidelity. Explicitly selected Kaggle or Modal OCR uploads its one-page subset; never upload whole books or
 reprocess an entire large library just to start a lesson.
 Use `catalogue_search` only when this learner has configured a reference
 metadata catalogue; catalogue entries are not acquired holdings or a syllabus. Solution
@@ -110,7 +110,7 @@ Never guess an identity or disclose tokens. An exhausted account cannot execute
 a switching tool; the owner can use the account page even if both models fail.
 
 For PDF work local remains default. At the owner's request, use
-`pdf_processing_backend` to select local or modal for this vault, or pass
+`pdf_processing_backend` to select local, kaggle or modal for this vault, or pass
 `backend` to one `prepare_pdf` call. Good digital text and reviewed cached bytes
 need no OCR or upload. Modal uses a private one-page CPU worker with the same
 MinerU 4.1.3 Standard ZIP contract; it is not the public Pageweft guest route.
@@ -119,6 +119,19 @@ workspace metering. Reservations are conservative admission controls, not exact
 billing. Read actual provenance and warnings; inspect figures/tables/formulas.
 A failure preserves the source and previous extraction. Never silently upload
 a local job or switch processing backends on failure.
+
+Kaggle is an optional private batch notebook for personal non-commercial study,
+using one own authorized account. Check its live quota; availability can vary.
+Do not route startup development, client work or production to this provider,
+or rotate accounts for quota. A pending prepare_pdf result is not extracted
+text: save its job ID, teach from usable original text/figures if appropriate,
+and call prepare_pdf for the same source/page later to collect and validate.
+Never resubmit while queued/running/unknown. kaggle_processing_jobs lists and
+checks jobs; an explicit owner-requested retry is allowed only for the latest
+confirmed failure, with source/unit access checked again. Private notebooks
+are removed after successful collection; this does not promise immediate backup
+erasure. Missing cloud quota leaves originals/cache intact. Study setup →
+Accounts & processing provides the per-workspace selector and quota check.
 
 
 ## Continue beyond the prepared route

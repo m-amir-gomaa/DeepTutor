@@ -112,3 +112,19 @@ setup/PDF fixtures and the actual isolated-container renderer checks succeeded.
 Those container checks cover output, network/read-only-root limits, Manim video
 and timeout cleanup. They do not establish physical M3 GPU OCR or a fresh
 learner's native app/service authorization.
+
+## Optional Kaggle batch route — 9 November 2026
+
+The portable study suite passed 115 tests, including confirmed-failure retry,
+workspace/provider isolation, pending extraction preservation and result hashes.
+The native Chromium runtime was supplied explicitly for the browser checks.
+Actual local Study setup at desktop widths 1024/1440 exercised provider changes,
+reload persistence, live quota reading and the loaded Modal authorization controls.
+The scoped MCP exposed the new jobs tool and read the selected provider without
+inference. The real provider test used one original synthetic PDF page: MinerU
+4.1.3 Standard, two Tesla T4 GPUs, 97.2 seconds, verified input/output hashes,
+shared page/ZIP/Markdown/FTS handling, cache reuse and notebook cleanup.
+No user book, learning evidence or commercial source was used. This is not a
+whole-book fidelity benchmark. One account and personal study only; see
+GPU-PROVIDERS.md. Each new installation still needs its own authorization and
+bounded live qualification.

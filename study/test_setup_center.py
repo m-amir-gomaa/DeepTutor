@@ -70,11 +70,31 @@ class SetupCenter(unittest.TestCase):
   def require():
    if not owner['allowed']:raise HTTPException(status_code=403)
   setup_center.install_routes(router,require);app.include_router(router);client=TestClient(app)
-  for method,path,kwargs in [('GET','/guide/human',{}),('GET','/modal',{}),('POST','/render',{'json':{'template_id':'start','values':{}}})]:
+  for method,path,kwargs in [('GET','/guide/human',{}),('GET','/modal',{}),('GET','/kaggle',{}),('POST','/kaggle/check',{'json':{}}),('GET','/pdf-backend',{}),('POST','/pdf-backend',{'json':{'backend':'kaggle'}}),('POST','/render',{'json':{'template_id':'start','values':{}}})]:
    self.assertEqual(client.request(method,'/api/settings/study'+path,**kwargs).status_code,403)
   owner['allowed']=True
   self.assertEqual(client.post('/api/settings/study/render',json={'template_id':'repair','values':{}}).status_code,422)
   self.assertEqual(client.post('/api/settings/study/render',json={'template_id':'start','values':{}}).status_code,200)
   self.assertEqual(client.get('/api/settings/study/guide/human').status_code,200)
+
+ def test_provider_route_uses_workspace_identity_and_rejects_arbitrary_paths(self):
+  import library,source_pipeline
+  from types import SimpleNamespace
+  from contextlib import contextmanager
+  @contextmanager
+  def scope(identity):yield SimpleNamespace(workspace_id=identity)
+  with tempfile.TemporaryDirectory() as td,patch.object(library,'records',return_value={
+    'first':{'path':td+'/first','workspace':{'workspace':{'workspace_id':'first-ws'}}},
+    'second':{'path':td+'/second','workspace':{'workspace_id':'second-ws'}}}),patch('deeptutor.services.workspace.context.workspace_context',scope):
+   for name in ['first','second']:(Path(td)/name/'.study').mkdir(parents=True)
+   with patch.object(library,'vault',side_effect=lambda slug:Path(td)/slug),patch.object(study_settings,'load',return_value={**study_settings.load(),'kaggle':{'enabled':True}}):
+    app=FastAPI();router=APIRouter(prefix='/api/settings');setup_center.install_routes(router,lambda:None);app.include_router(router);client=TestClient(app)
+    url='/api/settings/study/pdf-backend?dt_workspace=first-ws'
+    self.assertEqual(client.post(url,json={'backend':'kaggle'}).json()['backend'],'kaggle')
+    self.assertEqual(client.get('/api/settings/study/pdf-backend?dt_workspace=second-ws').json()['backend'],'local')
+    self.assertEqual(client.post(url,json={'backend':'local','path':'/tmp/other'}).status_code,422)
+    self.assertEqual(client.post(url,json={'backend':[]}).status_code,422)
+    self.assertEqual(client.get('/api/settings/study/pdf-backend?dt_workspace=unknown').status_code,422)
+    self.assertEqual(client.get(url).json()['backend'],'kaggle')
 
 if __name__=='__main__':unittest.main()

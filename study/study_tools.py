@@ -185,7 +185,7 @@ def make_server(slug: str) -> FastMCP:
         return curriculum.status(slug)
 
     @mcp.tool()
-    def study_setup(topic: Literal['overview','accounts','modal','books','cards','memory','visuals','first_setup'] = 'overview') -> dict:
+    def study_setup(topic: Literal['overview','accounts','modal','kaggle','books','cards','memory','visuals','first_setup'] = 'overview') -> dict:
         """Give this workspace's standard links and concise human instructions for the requested topic. The agent should perform routine technical work and communicate only the owner action needed now. Includes prompt IDs/profiles; never handles credentials, runs cloud jobs or changes settings."""
         import setup_center
         return {'links':setup_center.links(ws['workspace_id']),'help':setup_center.human_help(topic,ws['workspace_id']),'profiles':setup_center.profiles(),
@@ -256,17 +256,26 @@ def make_server(slug: str) -> FastMCP:
         with urlopen(request,timeout=20) as response:return json.load(response)
 
     @mcp.tool()
-    def pdf_processing_backend(backend: Literal['status','local','modal'] = 'status') -> dict:
-        """Read the PDF processing preference, or set local/Modal ONLY when requested by the owner. Applies to this vault's future OCR/layout calls, keeps the same page provenance/index/media workflow. Default local; Modal privately uploads one unlocked page when OCR is required and reserves $0.25 against a $5 monthly personal limit. Never changes the public guest allowance or billing settings."""
+    def pdf_processing_backend(backend: Literal['status','local','modal','kaggle'] = 'status') -> dict:
+        """Read the PDF processing preference, or set local/Kaggle/Modal ONLY when requested by the owner. Kaggle is one-account personal non-commercial batch processing; it may queue. Applies to this vault's future OCR/layout calls, keeps the same page provenance/index/media workflow. Default local; Modal privately uploads one unlocked page when OCR is required and reserves $0.25 against a $5 monthly personal limit. Never changes the public guest allowance or billing settings."""
         return source_pipeline.backend_settings(slug,None if backend=='status' else backend)
 
     @mcp.tool()
-    def prepare_pdf(source_id: str, first_pdf_page: int, last_pdf_page: int | None = None, mode: Literal['auto','layout'] = 'auto', backend: Literal['local','modal'] | None = None) -> dict:
-        """Prepare up to eight unlocked physical pages. auto uses digital text, with MinerU Standard for sparse scans; layout requests one MinerU page for tables/formulas. backend overrides the vault preference for this call. Local is default; use Modal only if the owner requested cloud processing. Both share ZIP validation, physical-page references, corrections and FTS indexing. Inspect page images and warnings; no OCR fidelity or learning-completion claim. Never uploads an entire book."""
+    def prepare_pdf(source_id: str, first_pdf_page: int, last_pdf_page: int | None = None, mode: Literal['auto','layout'] = 'auto', backend: Literal['local','modal','kaggle'] | None = None) -> dict:
+        """Prepare up to eight unlocked physical pages; layout/scans use one page. Local is default. Explicit Kaggle is one-account personal non-commercial batch OCR: pending is not completed; call again with the same page to collect. Explicit Modal is separate, with no paid fallback. All use validated ZIPs, source pages, preserved corrections and FTS. Inspect original figures and warnings. No whole-book upload or fidelity/learning-completion claim."""
         last=first_pdf_page if last_pdf_page is None else last_pdf_page
         if not 1<=first_pdf_page<=last or last-first_pdf_page>=8:raise ValueError('Prepare one to eight pages')
         for page in range(first_pdf_page,last+1):curriculum.require(slug,source_id,page)
         return source_pipeline.prepare(slug,source_id,first_pdf_page,last,mode,backend)
+
+    @mcp.tool()
+    def kaggle_processing_jobs(action: Literal['list','status','delete','retry'] = 'list', job_id: str = '') -> dict:
+        """Inspect this vault's private personal Kaggle jobs without model inference. To collect, call prepare_pdf again for the same page. ONLY at the owner's explicit request, retry the latest confirmed failed job; this consumes GPU quota and checks source/unit access again. Delete removes only the recorded notebook; use the dashboard to stop a running session. Never rotates accounts, retries automatically, or changes to Modal."""
+        import kaggle_jobs
+        if action=='list':return {'jobs':kaggle_jobs.jobs(slug),'account':kaggle_jobs.status()}
+        if action=='status':return kaggle_jobs.view(kaggle_jobs.inspect(slug,job_id))
+        if action=='retry':return kaggle_jobs.retry(slug,job_id)
+        return kaggle_jobs.delete_remote(slug,job_id)
 
     @mcp.tool()
     def search_sources(query: str, source_id: str | None = None, limit: int = 8) -> dict:

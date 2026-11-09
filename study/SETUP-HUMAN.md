@@ -14,7 +14,7 @@ by default.** You do not need a GitHub account to use the public fork.
 
 Open DeepTutor, then the **Study setup** page:
 `/api/settings/study/page` on the same address as your DeepTutor web app.
-Bookmark this page. Its **Accounts & Modal** tab links to the account switcher,
+Bookmark this page. Its **Accounts & processing** tab links to the account switcher,
 shows Modal metadata and gives your installation's exact terminal commands.
 The **Prompt templates** tab lets you choose a discipline, fill in a topic or
 paper, edit the prompt and copy it. Open Chat and paste; copying never runs it.
@@ -88,7 +88,7 @@ Research summaries are not automatically systematic reviews or clinical advice.
 
 ## Codex account selection
 
-From Study setup → **Accounts & Modal** → **Open account controls**. It shows
+From Study setup → **Accounts & processing** → **Open account controls**. It shows
 display names, this workspace's preference, the effective next account and the
 account behind the latest completed model call. The current call cannot move
 mid-stream. Subsequent calls observe the new setting. Automatic selection may
@@ -101,6 +101,16 @@ page yourself; it needs the local backend, not a successful model call.
 With one account, keep the primary/automatic setting. “Secondary” applies only
 if you choose to add and authorize another account later.
 
+## Choose an OCR provider
+
+In Study setup → **Accounts & processing**, choose Local, Kaggle or Modal and
+press **Use this provider**. It changes only this workspace; no job starts.
+Kaggle supports private personal-study batch GPU jobs using one own account.
+Check quota on the same page. Ask the tutor to collect a pending page later;
+it must not describe a queued job as finished text. Commercial development
+uses a different provider. See [GPU providers](GPU-PROVIDERS.md) for setup,
+collection, failures and commercial training alternatives.
+
 ## Modal tokens and optional OCR
 
 Local PDF extraction is the default. The optional private worker uses the same
@@ -108,7 +118,7 @@ MinerU 4.1.3 Standard output contract and uploads only the requested page subset
 Changing the OCR location does not reprocess cached corrected pages. The legacy
 native upload adapter remains local; the setting belongs to `prepare_pdf`.
 
-Use the commands displayed on Study setup → Accounts & Modal. The normal flow is
+Use the commands displayed on Study setup → Accounts & processing. The normal flow is
 `python -m modal token new`: finish your own browser authorization. For a token
 issued in the Modal dashboard, use `python -m modal token set --token-id -
 --token-secret -` in your own terminal; the prompts hide the values. Then use

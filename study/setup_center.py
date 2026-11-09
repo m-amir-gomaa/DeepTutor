@@ -37,6 +37,14 @@ def modal_status(check=False):
               'replace_token':shlex.join([python,'-m','modal','token','set','--token-id','-','--token-secret','-']),
               'profiles':shlex.join([python,'-m','modal','profile','list']),
               'current_profile':shlex.join([python,'-m','modal','profile','current'])}}
+def pdf_backend(workspace_id,backend=None):
+    import library,source_pipeline
+    for slug,record in library.records().items():
+        workspace=record.get('workspace',{})
+        workspace=workspace.get('workspace',workspace)
+        if workspace.get('workspace_id')==workspace_id:
+            return {'vault':slug,**source_pipeline.backend_settings(slug,backend)}
+    raise ValueError('Choose a registered study workspace first.')
 def data(workspace_id=''):
     return {'code_location':str(ROOT),'profiles':profiles(),'prompts':prompts(),'links':links(workspace_id),
             'meaning':'Copying a template does not execute it, change settings, unlock material or record learning.'}
@@ -54,7 +62,8 @@ def human_help(topic,workspace_id=''):
       'memory':'Tell the agent a durable preference explicitly, such as language, useful visual style or check frequency, and ask it to save and read it back. Notes and chronological checkpoints are separate from native profile/preferences. Never save credentials or identifiable medical records in memory.',
       'visuals':'Use relevant original book figures first. The agent can create original plots, simulations, mechanism diagrams or animations when they reveal structure or reasoning beyond the page. Require faithful labels/units, source comparison, calculation checks and inspection of the actual render or interaction; decorative text slides are insufficient for a mechanism. Missing renderers need setup; successful file creation alone is not content verification.',
       'first_setup':'Give your setup assistant START-HERE.md, SETUP-AGENT.md and study/platforms/README.md from the fork. One Codex account is enough; Modal is optional and disabled by default. The agent detects your OS/chip/memory, prepares the private layout and launcher, asks only for missing goals/sources/language and guides one necessary human action at a time. You do not need to read the entire manual first.',
-      'modal':'Use the Modal section of Study setup. Run its displayed browser-login command in your own terminal, or use hidden token prompts for a dashboard-issued token. After renewal, check the private worker. Selecting a new Modal workspace can require deployment there. No token belongs in chat; no cloud job or budget change is needed just to inspect setup.'}
+      'modal':'Use the Modal section of Study setup. Run its displayed browser-login command in your own terminal, or use hidden token prompts for a dashboard-issued token. After renewal, check the private worker. Selecting a new Modal workspace can require deployment there. No token belongs in chat; no cloud job or budget change is needed just to inspect setup.',
+      'kaggle':'Open Study setup → Accounts & processing. Check the current account quota, then select Kaggle for this workspace. Authorize one own account with kaggle auth login in the owner terminal if needed; keep tokens out of chat. The setup agent enables the non-secret username/configuration after authorization. Kaggle is personal non-commercial batch processing, not commercial development or a production API. Queued jobs are not ready text: call prepare_pdf again for the same page to collect, validate and index the result. Never rotate accounts or automatically switch to Modal.'}
     if topic not in topics:raise ValueError('Choose one of: '+', '.join(topics))
     result={'topic':topic,'human_steps':topics[topic],'links':route,
             'agent_instruction':'Do routine technical work yourself. Explain only the immediate owner action and why it is needed. Do not send the learner through the whole manual or claim untested readiness.'}
@@ -100,3 +109,27 @@ def install_routes(router,require_owner):
     async def study_modal_check():
         require_owner()
         return await asyncio.to_thread(modal_status,True)
+    @router.get('/study/kaggle')
+    async def study_kaggle_status():
+        require_owner()
+        import kaggle_jobs
+        return kaggle_jobs.status()
+    @router.post('/study/kaggle/check')
+    async def study_kaggle_check():
+        require_owner()
+        import kaggle_jobs
+        return await asyncio.to_thread(kaggle_jobs.status,True)
+    @router.get('/study/pdf-backend')
+    async def study_pdf_backend(dt_workspace: str | None = None):
+        require_owner()
+        try:
+            with workspace_context(dt_workspace) as scope:return pdf_backend(scope.workspace_id)
+        except ValueError as exc:raise HTTPException(status_code=422,detail=str(exc)) from None
+    @router.post('/study/pdf-backend')
+    async def study_pdf_backend_select(body: dict,dt_workspace: str | None = None):
+        require_owner()
+        try:
+            if set(body)!={'backend'} or body['backend'] not in {'local','kaggle','modal'}:
+                raise ValueError('Choose local, kaggle or modal.')
+            with workspace_context(dt_workspace) as scope:return pdf_backend(scope.workspace_id,body['backend'])
+        except (ValueError,TypeError) as exc:raise HTTPException(status_code=422,detail=str(exc)) from None

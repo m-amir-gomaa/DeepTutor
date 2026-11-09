@@ -84,6 +84,14 @@ sandboxing or install system services simply to unblock an optional renderer.
 
 ## Optional Modal route
 
+For optional Kaggle, follow `GPU-PROVIDERS.md`: one own account, personal study
+only, native CLI authorization, no token copies and no automatic account
+rotation. Preserve existing configuration, connect the scoped service again
+with `manage.py attach`, and verify the per-workspace selector. Qualify only an
+original synthetic page first; distinguish queued/submitted from collected and
+validated. Record actual hardware, output provenance and remote cleanup.
+Do not enable it for client work or commercial product development.
+
 Keep cloud disabled until the owner selects a Modal workspace and confirms the
 current credit and spending policy. Install the isolated SDK from
 `study-modal-requirements.txt`, use native browser authorization and set only

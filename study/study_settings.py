@@ -19,9 +19,10 @@ def load():
     base=Path(raw.get('library_root',Path.home()/'DeepTutorStudy')).expanduser().resolve()
     defaults={'library_root':str(base),'backend_url':'http://127.0.0.1:8001','frontend_url':'http://127.0.0.1:3782',
       'python':sys.executable,'native_library_path':'','startup_catalogue_root':str(base/'catalogues'),
-      'tools':{},'modal':{'python':sys.executable,'app':'deeptutor-study-mineru','profile':'',
+      'tools':{},'kaggle':{'enabled':False,'username':'','max_seconds':1800},'modal':{'python':sys.executable,'app':'deeptutor-study-mineru','profile':'',
                         'enabled':False,'reservation_limit_usd':5,'credit_ceiling_usd':0,'reserve_usd':.25}}
-    defaults.update({k:v for k,v in raw.items() if k not in {'modal','tools'}})
+    defaults.update({k:v for k,v in raw.items() if k not in {'modal','tools','kaggle'}})
+    defaults['kaggle'].update(raw.get('kaggle',{}))
     defaults['modal'].update(raw.get('modal',{}));defaults['tools'].update(raw.get('tools',{}))
     for key in ['backend_url','frontend_url']:
         from urllib.parse import urlsplit

@@ -14,7 +14,9 @@ MODAL_PYTHON=study_settings.load()['modal']['python']
 def backend_settings(slug,backend=None):
     path=library.vault(slug)/'.study/pdf-processing.json'
     if backend is not None:
-        if backend not in {'local','modal'}:raise ValueError('Choose local or modal')
+        if backend not in {'local','modal','kaggle'}:raise ValueError('Choose local, kaggle or modal')
+        if backend=='kaggle' and not study_settings.load()['kaggle']['enabled']:
+            raise ValueError('Kaggle is not enabled in this installation; authorize one personal account first.')
         library.write_json(path,{'backend':backend,'changed_at':library.now()})
     selected=json.loads(path.read_text()) if path.exists() else {'backend':'local'}
     qualification=library.CONTROL/'modal-qualification.json'
@@ -25,7 +27,8 @@ def backend_settings(slug,backend=None):
             'modal_scope':'private personal CPU worker; one-page subsets only; no public endpoint',
             'monthly_modal_reservation_limit_usd':study_settings.load()['modal']['reservation_limit_usd'],
             'per_job_reservation_usd':study_settings.load()['modal']['reserve_usd'],
-            'policy':'Usable digital text and verified cached pages stay local. Modal is used only for OCR/layout when explicitly selected; no automatic cloud fallback. A reservation is not an exact bill.'}
+            'kaggle_enabled':study_settings.load()['kaggle']['enabled'],
+            'policy':'Usable digital text and verified cached pages stay local. Explicit Kaggle OCR uses private personal-study batch jobs; call prepare_pdf again to collect a completed job. Modal is a separate explicit choice. No automatic cloud fallback. A reservation is not an exact bill.'}
 def quality(text):
     warnings=[]
     if len(re.findall(r'\w',text))<40:warnings.append('Sparse or missing text layer: inspect the page image; OCR may be needed.')
@@ -57,7 +60,7 @@ def unpack_zip(archive,destination):
     return markdown.read_text(),d
 def prepare(slug,source_id,first,last=None,mode='auto',backend=None):
     backend=backend_settings(slug)['backend'] if backend is None else backend
-    if backend not in {'local','modal'}:raise ValueError('Choose local or modal')
+    if backend not in {'local','modal','kaggle'}:raise ValueError('Choose local, kaggle or modal')
     s=next((s for s in library.sources(slug) if s['id']==source_id),None)
     if not s:raise ValueError('Unknown registered source')
     last=first if last is None else last
@@ -83,18 +86,27 @@ def prepare(slug,source_id,first,last=None,mode='auto',backend=None):
                     td=Path(td);subset=td/'page.pdf';result=td/'result.zip'
                     with pymupdf.open() as one:
                         one.insert_pdf(pdf,from_page=page-1,to_page=page-1);one.save(subset)
-                    if backend=='local':
+                    if backend=='kaggle':
+                        import kaggle_jobs
+                        job=kaggle_jobs.prepare(slug,subset,s['sha256'],page,result)
+                        if job['status']=='pending':
+                            return {'status':'pending','job':job['job'],'pages':receipts,
+                                    'requested_backend':backend,'cloud_upload':True,
+                                    'next':'Call prepare_pdf with the same source and physical page to check and collect this job. Do not submit a duplicate. Original and previous extraction remain intact.'}
+                        cloud_receipt=job['receipt'];uploaded=True
+                    elif backend=='local':
                         command=['bash',WRAPPER,str(subset),'--tier','standard','--ocr-mode','auto','--format','zip','-o',str(result)]
                     else:
                         command=[MODAL_PYTHON,str(Path(__file__).with_name('modal_mineru_client.py')),str(subset),str(result)]
-                    run=subprocess.run(command,capture_output=True,text=True,timeout=180 if backend=='local' else 360)
-                    if run.returncode or not result.exists():raise RuntimeError(backend.title()+' MinerU failed; original and previous extraction preserved. No automatic backend fallback was attempted.')
+                    if backend!='kaggle':
+                        run=subprocess.run(command,capture_output=True,text=True,timeout=180 if backend=='local' else 360)
+                        if run.returncode or not result.exists():raise RuntimeError(backend.title()+' MinerU failed; original and previous extraction preserved. No automatic backend fallback was attempted.')
                     if backend=='modal':
                         cloud_receipt=json.loads(run.stdout)
                         if cloud_receipt['input_sha256']!=library.digest(subset) or cloud_receipt['output_sha256']!=library.digest(result):raise ValueError('Cloud parser provenance mismatch')
                         uploaded=True
                     parsed=td/'unpacked';parsed.mkdir();text,middle=unpack_zip(result,parsed)
-                    engine='mineru-4.1.3-standard-local' if backend=='local' else 'mineru-4.1.3-standard-modal-cpu';assets=root/f'page-{page:04d}-assets'
+                    engine={'local':'mineru-4.1.3-standard-local','modal':'mineru-4.1.3-standard-modal-cpu','kaggle':'mineru-4.1.3-standard-kaggle-gpu'}[backend];assets=root/f'page-{page:04d}-assets'
                     if assets.exists():
                         # Preserve older assets too; source hash keys are stable, reprocessing is uncommon.
                         assets=root/(f'page-{page:04d}-assets-'+hashlib.sha256(result.read_bytes()).hexdigest()[:10])

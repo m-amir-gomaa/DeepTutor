@@ -61,7 +61,13 @@ Draw.io/Inkscape/FFmpeg and an authenticated Anki MCP service are optional,
 independently verified integrations. Follow the guides rather than treating
 presence as acceptance.
 
-## Local and Modal OCR
+## Local, Kaggle and Modal OCR
+
+The per-workspace selector is in **Study setup → Accounts & processing**.
+[GPU providers](GPU-PROVIDERS.md) explains optional personal-study Kaggle jobs,
+quota checks, collection/retry/cleanup and commercial training alternatives.
+Kaggle is disabled by default, uses one own account, and never falls back to
+Modal automatically. Both cloud routes share the validated local result pipeline.
 
 Local remains default. Install MinerU 4.1.3 into an isolated environment, download
 the appropriate Standard models using its official commands, and configure
