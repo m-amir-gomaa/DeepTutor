@@ -100,20 +100,22 @@ Core fixes are integrated into source; no absolute-path patching of
 site-packages is needed here. Optional third-party app harness fixes from the
 author's machine are not vendored and require version-specific acceptance.
 No books, business registries, credentials, chats or learner progress are bundled.
-# Optional temporary Codex account
+# Optional persistent third Codex account
 
-The Codex account page supports an independent **Temporary** slot alongside the
-two saved slots. Use its native **Connect temporary account** action; do not copy
-another client's grants. Select it only inside the intended workspace. Temporary
+The Codex account page supports an independent **Third account** slot alongside the
+two saved slots. Use its native **Connect third account** action; do not copy
+another client's grants. Select it only inside the intended workspace. Third-account
 selection disables fallback and cannot become the owner-wide default, so other
 workspaces do not silently consume that authorization.
 
 Keep the slot connected for as long as the owner requests; it has no automatic
 end-of-job logout. When the owner asks to remove it, finish active turns, open
-the account page for that workspace and use **Disconnect temporary account**.
+the account page for that workspace and use **Disconnect third account**.
 Native logout refuses active inference, removes that grant and restores the
-prior workspace selection. Verify that Temporary is disconnected and both saved
+prior workspace selection. Verify that Third account is disconnected and both saved
 accounts remain connected. This does not log out a separate host Codex client.
 A successful
 connection does not establish model access or available quota; check one real
 request and the page's actual-use record. No API-key billing fallback is added.
+
+The third slot retains the internal `temporary` key for compatibility with existing settings and routes; this key does not expire the authorization. All three slots can stay connected until the owner explicitly disconnects them.
