@@ -63,6 +63,33 @@ class PoolTests(unittest.IsolatedAsyncioTestCase):
  async def test_symlinked_pool_settings_are_rejected(self):
   self.path.mkdir();(self.path/'availability.json').symlink_to(Path(self.temp.name)/'elsewhere')
   with self.assertRaises(CodexAuthError):pool.state()
+ async def test_merged_headers_and_tool_deltas_follow_the_actual_fallback_account(self):
+  seen=[];deltas=[]
+  async def response(url,headers,body,**kwargs):
+   seen.append(headers)
+   self.assertEqual(body['reasoning']['effort'],'low')
+   if headers['chatgpt-account-id']==self.a.account:raise provider.CodexHTTPError(429,'Exhausted')
+   await kwargs['on_tool_args_delta']('call-fixture','fixture_tool','{"safe":true}')
+   return 'Fixture response',[],'stop'
+  async def delta(*args):deltas.append(args)
+  adapter=provider.OpenAICodexProvider(extra_headers={'X-Profile':'profile','X-Order':'profile','Authorization':'forged'})
+  with patch.object(provider,'get_codex_oauth_service',lambda:self.a),patch.object(provider,'_request_codex',response),patch.object(provider,'_runtime_reasoning_effort',lambda *args:'low'):
+   result=await adapter.chat_stream([{'role':'user','content':'Temporary fixture'}],model='gpt-6.1-sol',reasoning_effort='none',on_tool_args_delta=delta,extra_headers={'x-order':'call','ChatGPT-Account-ID':'forged','session-id':'forged'})
+  self.assertEqual(result.finish_reason,'stop');self.assertEqual(len(seen),2)
+  self.assertEqual([headers['chatgpt-account-id'] for headers in seen],[self.a.account,self.b.account])
+  for headers in seen:
+   self.assertEqual(headers['Authorization'],'Bearer not-a-real-token');self.assertEqual(headers['X-Profile'],'profile')
+   self.assertEqual(headers['x-order'],'call');self.assertNotIn('X-Order',headers);self.assertNotEqual(headers['session-id'],'forged')
+  self.assertEqual(deltas,[('call-fixture','fixture_tool','{"safe":true}')])
+  self.assertEqual(result.provider_specific_fields['codex_account']['slot'],'secondary')
+ async def test_partial_tool_arguments_are_never_replayed(self):
+  async def broken(*args,**kwargs):
+   await kwargs['on_tool_args_delta']('call-fixture','fixture_tool','{"partial":');raise httpx.ReadError('Fixture stream interrupted')
+  other=AsyncMock();delta=AsyncMock()
+  with patch.object(pool,'preferred',lambda p:self.a),patch.object(pool,'try_other',other),patch.object(provider,'get_codex_oauth_service',lambda:self.a),patch.object(provider,'_request_codex',broken):
+   result=await provider.OpenAICodexProvider().chat_stream([{'role':'user','content':'Temporary fixture'}],model='gpt-6.1-sol',on_tool_args_delta=delta)
+  self.assertEqual(result.finish_reason,'error');self.assertIn('after output began',result.content)
+  delta.assert_awaited_once();other.assert_not_awaited()
  async def test_manual_selection_and_strict_no_fallback(self):
   pool.select('secondary',False);self.assertIs(pool.preferred(self.a),self.b)
   invoke=AsyncMock();e=provider.CodexHTTPError(429,'Exhausted')

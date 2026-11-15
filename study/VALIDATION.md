@@ -1,5 +1,8 @@
 # Verification of this implementation
 
+Latest source update: [v1.7.2 integration, 15 November 2026](UPSTREAM-20261115.md).
+Earlier dated runs below remain historical evidence.
+
 ## Portable first-run and macOS additions, 2026-11-05
 
 The current local portable suite passes **102 tests**, including 13 platform/layout,

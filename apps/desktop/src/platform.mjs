@@ -1,4 +1,6 @@
+// Study-fork modification, 15 November 2026: recognize NixOS system utilities.
 import path from 'node:path';
+import { existsSync } from 'node:fs';
 
 // Everything that differs between macOS and Windows at run time lives here;
 // build-time differences live in platforms/<target>/.
@@ -40,11 +42,14 @@ export function agentMarker(version, platform = process.platform, arch = process
 
 /** The system tar: bsdtar on both macOS and Windows 10+, which also reads zip. */
 export function systemTar() {
+  // NixOS keeps system utilities in its system profile, including for source tests.
+  if (process.platform === 'linux' && existsSync('/run/current-system/sw/bin/tar')) return '/run/current-system/sw/bin/tar';
   return WINDOWS ? path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'tar.exe') : '/usr/bin/tar';
 }
 
 /** A PATH that holds only operating system tools, so tests prove no developer toolchain is used. */
 export function systemPath() {
+  if (process.platform === 'linux' && existsSync('/run/current-system/sw/bin')) return '/run/current-system/sw/bin:/usr/bin:/bin:/usr/sbin:/sbin';
   if (!WINDOWS) return '/usr/bin:/bin:/usr/sbin:/sbin';
   const root = process.env.SystemRoot ?? 'C:\\Windows';
   return [path.join(root, 'System32'), root, path.join(root, 'System32', 'Wbem')].join(';');

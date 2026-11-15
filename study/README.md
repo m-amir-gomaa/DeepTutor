@@ -1,7 +1,9 @@
 # Standard study layer
 
 Start with [the human guide](SETUP-HUMAN.md) or give [the agent guide](SETUP-AGENT.md)
-to your setup assistant. This branch extends upstream DeepTutor v1.7.1.
+to your setup assistant. This branch extends upstream DeepTutor v1.7.2.
+The [15 November upstream integration record](UPSTREAM-20261115.md) documents
+the preserved study customizations, verification and remaining release limits.
 Nontechnical learners can start with [Start here](../START-HERE.md).
 The [platform guides](platforms/README.md) cover a standard private directory
 layout, a macOS Finder launcher, native Apple Silicon OCR and optional isolated
